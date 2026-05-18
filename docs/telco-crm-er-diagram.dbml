@@ -1,0 +1,923 @@
+// Telco CRM Microservices ER Diagram - DBML text representation
+// Service boundaries are listed with comments. Cross-service references are logical references, not physical database FK constraints.
+
+// =========================================================
+// identity-service / identity_db
+// =========================================================
+
+Table IDENTITY_SERVICE_USER {
+  id uuid [primary key]
+  email varchar [unique]
+  passwordHash varchar
+  status varchar
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table IDENTITY_SERVICE_ROLE {
+  id uuid [primary key]
+  name varchar [unique]
+  description varchar
+}
+
+Table IDENTITY_SERVICE_PERMISSION {
+  id uuid [primary key]
+  code varchar [unique]
+  description varchar
+}
+
+Table IDENTITY_SERVICE_USER_ROLE {
+  userId uuid [not null]
+  roleId uuid [not null]
+
+  indexes {
+    (userId, roleId) [pk]
+  }
+}
+
+Table IDENTITY_SERVICE_ROLE_PERMISSION {
+  roleId uuid [not null]
+  permissionId uuid [not null]
+
+  indexes {
+    (roleId, permissionId) [pk]
+  }
+}
+
+Table IDENTITY_SERVICE_REFRESH_TOKEN {
+  id uuid [primary key]
+  userId uuid [not null]
+  tokenHash varchar
+  expiresAt timestamp
+  revokedAt timestamp
+  createdAt timestamp
+}
+
+Table IDENTITY_SERVICE_AUDIT_LOG {
+  id uuid [primary key]
+  actorUserId uuid
+  action varchar
+  entityType varchar
+  entityId uuid
+  oldValueJson jsonb
+  newValueJson jsonb
+  correlationId varchar
+  createdAt timestamp
+}
+
+Table IDENTITY_SERVICE_OUTBOX_EVENT {
+  id uuid [primary key]
+  aggregateId uuid
+  aggregateType varchar
+  eventType varchar
+  payloadJson jsonb
+  status varchar [note: 'PENDING | PUBLISHED | FAILED']
+  createdAt timestamp
+  publishedAt timestamp
+}
+
+Table IDENTITY_SERVICE_PROCESSED_EVENT {
+  id uuid [primary key]
+  eventId uuid [unique]
+  eventType varchar
+  sourceService varchar
+  aggregateId uuid
+  processedAt timestamp
+  status varchar [note: 'PROCESSED | FAILED']
+  errorMessage varchar
+  createdAt timestamp
+}
+
+Ref identity_user_roles: IDENTITY_SERVICE_USER_ROLE.userId > IDENTITY_SERVICE_USER.id // N-1, physical FK; USER 1-N USER_ROLE
+Ref identity_role_users: IDENTITY_SERVICE_USER_ROLE.roleId > IDENTITY_SERVICE_ROLE.id // N-1, physical FK; ROLE 1-N USER_ROLE; USER M-N ROLE via USER_ROLE
+Ref identity_role_permissions: IDENTITY_SERVICE_ROLE_PERMISSION.roleId > IDENTITY_SERVICE_ROLE.id // N-1, physical FK; ROLE 1-N ROLE_PERMISSION
+Ref identity_permission_roles: IDENTITY_SERVICE_ROLE_PERMISSION.permissionId > IDENTITY_SERVICE_PERMISSION.id // N-1, physical FK; PERMISSION 1-N ROLE_PERMISSION; ROLE M-N PERMISSION via ROLE_PERMISSION
+Ref identity_refresh_tokens: IDENTITY_SERVICE_REFRESH_TOKEN.userId > IDENTITY_SERVICE_USER.id // N-1, physical FK; USER 1-N REFRESH_TOKEN
+Ref identity_audit_actor: IDENTITY_SERVICE_AUDIT_LOG.actorUserId > IDENTITY_SERVICE_USER.id // N-1, physical FK/logical actor; USER 1-N AUDIT_LOG
+Ref identity_outbox_events: IDENTITY_SERVICE_OUTBOX_EVENT.aggregateId > IDENTITY_SERVICE_USER.id // N-1, aggregate ref; USER 1-N OUTBOX_EVENT
+
+// =========================================================
+// customer-service / customer_db
+// =========================================================
+
+Table CUSTOMER_SERVICE_CUSTOMER {
+  id uuid [primary key]
+  type varchar [note: 'INDIVIDUAL | CORPORATE']
+  firstName varchar
+  lastName varchar
+  identityNumber varchar [unique, note: 'Encrypted TCKN/VKN']
+  dateOfBirth date
+  status varchar [note: 'PENDING | ACTIVE | REJECTED | DELETED']
+  createdAt timestamp
+  updatedAt timestamp
+  deletedAt timestamp [note: 'Soft delete']
+}
+
+Table CUSTOMER_SERVICE_ADDRESS {
+  id uuid [primary key]
+  customerId uuid [not null]
+  line1 varchar
+  city varchar
+  district varchar
+  postalCode varchar
+  isDefault boolean
+  createdAt timestamp
+}
+
+Table CUSTOMER_SERVICE_DOCUMENT {
+  id uuid [primary key]
+  customerId uuid [not null]
+  type varchar [note: 'ID_CARD | PASSPORT']
+  fileRef varchar
+  status varchar [note: 'PENDING | VERIFIED | REJECTED']
+  verifiedAt timestamp
+  createdAt timestamp
+}
+
+Table CUSTOMER_SERVICE_CUSTOMER_CONTACT {
+  id uuid [primary key]
+  customerId uuid [not null]
+  type varchar [note: 'EMAIL | PHONE']
+  value varchar
+  isPrimary boolean
+  verifiedAt timestamp
+}
+
+Table CUSTOMER_SERVICE_CUSTOMER_PREFERENCE {
+  id uuid [primary key]
+  customerId uuid [not null, unique]
+  smsOptIn boolean
+  emailOptIn boolean
+  pushOptIn boolean
+  locale varchar
+}
+
+Table CUSTOMER_SERVICE_AUDIT_LOG {
+  id uuid [primary key]
+  actorUserId uuid [note: 'Logical ref: IDENTITY_SERVICE_USER.id']
+  action varchar
+  entityType varchar
+  entityId uuid
+  oldValueJson jsonb
+  newValueJson jsonb
+  correlationId varchar
+  createdAt timestamp
+}
+
+Table CUSTOMER_SERVICE_OUTBOX_EVENT {
+  id uuid [primary key]
+  aggregateId uuid
+  aggregateType varchar
+  eventType varchar
+  payloadJson jsonb
+  status varchar [note: 'PENDING | PUBLISHED | FAILED']
+  createdAt timestamp
+  publishedAt timestamp
+}
+
+Table CUSTOMER_SERVICE_PROCESSED_EVENT {
+  id uuid [primary key]
+  eventId uuid [unique]
+  eventType varchar
+  sourceService varchar
+  aggregateId uuid
+  processedAt timestamp
+  status varchar [note: 'PROCESSED | FAILED']
+  errorMessage varchar
+  createdAt timestamp
+}
+
+Ref customer_addresses: CUSTOMER_SERVICE_ADDRESS.customerId > CUSTOMER_SERVICE_CUSTOMER.id // N-1, physical FK; CUSTOMER 1-N ADDRESS
+Ref customer_documents: CUSTOMER_SERVICE_DOCUMENT.customerId > CUSTOMER_SERVICE_CUSTOMER.id // N-1, physical FK; CUSTOMER 1-N DOCUMENT
+Ref customer_contacts: CUSTOMER_SERVICE_CUSTOMER_CONTACT.customerId > CUSTOMER_SERVICE_CUSTOMER.id // N-1, physical FK; CUSTOMER 1-N CUSTOMER_CONTACT
+Ref customer_preferences: CUSTOMER_SERVICE_CUSTOMER_PREFERENCE.customerId - CUSTOMER_SERVICE_CUSTOMER.id // 1-1, physical FK; CUSTOMER 1-1 CUSTOMER_PREFERENCE
+Ref customer_audit_logs: CUSTOMER_SERVICE_AUDIT_LOG.entityId > CUSTOMER_SERVICE_CUSTOMER.id // N-1, logical/internal audit target; CUSTOMER 1-N AUDIT_LOG
+Ref customer_outbox_events: CUSTOMER_SERVICE_OUTBOX_EVENT.aggregateId > CUSTOMER_SERVICE_CUSTOMER.id // N-1, aggregate ref; CUSTOMER 1-N OUTBOX_EVENT
+
+// =========================================================
+// product-catalog-service / catalog_db
+// =========================================================
+
+Table PRODUCT_CATALOG_SERVICE_TARIFF {
+  id uuid [primary key]
+  code varchar [unique]
+  name varchar
+  type varchar [note: 'POSTPAID | PREPAID | HYBRID']
+  monthlyFee decimal
+  minutesIncluded integer
+  smsIncluded integer
+  dataMbIncluded bigint
+  status varchar [note: 'ACTIVE | PASSIVE | EXPIRED']
+  effectiveFrom timestamp
+  effectiveTo timestamp
+  version integer
+  createdAt timestamp
+}
+
+Table PRODUCT_CATALOG_SERVICE_ADDON {
+  id uuid [primary key]
+  code varchar [unique]
+  name varchar
+  price decimal
+  type varchar [note: 'DATA | SMS | MINUTES | VAS']
+  validityDays integer
+  status varchar
+}
+
+Table PRODUCT_CATALOG_SERVICE_TARIFF_ADDON {
+  tariffId uuid [not null]
+  addonId uuid [not null]
+
+  indexes {
+    (tariffId, addonId) [pk]
+  }
+}
+
+Table PRODUCT_CATALOG_SERVICE_PRODUCT_OFFERING {
+  id uuid [primary key]
+  code varchar [unique]
+  name varchar
+  productType varchar [note: 'TARIFF | ADDON | VAS']
+  targetSegment varchar
+  effectiveFrom timestamp
+  effectiveTo timestamp
+  status varchar
+}
+
+Table PRODUCT_CATALOG_SERVICE_TARIFF_VERSION {
+  id uuid [primary key]
+  tariffCode varchar [not null]
+  version integer
+  snapshotJson jsonb
+  effectiveFrom timestamp
+  effectiveTo timestamp
+}
+
+Table PRODUCT_CATALOG_SERVICE_AUDIT_LOG {
+  id uuid [primary key]
+  actorUserId uuid [note: 'Logical ref: IDENTITY_SERVICE_USER.id']
+  action varchar
+  entityType varchar
+  entityId uuid
+  oldValueJson jsonb
+  newValueJson jsonb
+  correlationId varchar
+  createdAt timestamp
+}
+
+Table PRODUCT_CATALOG_SERVICE_OUTBOX_EVENT {
+  id uuid [primary key]
+  aggregateId uuid
+  aggregateType varchar
+  eventType varchar
+  payloadJson jsonb
+  status varchar [note: 'PENDING | PUBLISHED | FAILED']
+  createdAt timestamp
+  publishedAt timestamp
+}
+
+Table PRODUCT_CATALOG_SERVICE_PROCESSED_EVENT {
+  id uuid [primary key]
+  eventId uuid [unique]
+  eventType varchar
+  sourceService varchar
+  aggregateId uuid
+  processedAt timestamp
+  status varchar [note: 'PROCESSED | FAILED']
+  errorMessage varchar
+  createdAt timestamp
+}
+
+Ref catalog_tariff_addons: PRODUCT_CATALOG_SERVICE_TARIFF_ADDON.tariffId > PRODUCT_CATALOG_SERVICE_TARIFF.id // N-1, physical FK; TARIFF 1-N TARIFF_ADDON
+Ref catalog_addon_tariffs: PRODUCT_CATALOG_SERVICE_TARIFF_ADDON.addonId > PRODUCT_CATALOG_SERVICE_ADDON.id // N-1, physical FK; ADDON 1-N TARIFF_ADDON; TARIFF M-N ADDON via TARIFF_ADDON
+Ref catalog_tariff_versions: PRODUCT_CATALOG_SERVICE_TARIFF_VERSION.tariffCode > PRODUCT_CATALOG_SERVICE_TARIFF.code // N-1, business key ref; TARIFF 1-N TARIFF_VERSION
+Ref catalog_tariff_offerings: PRODUCT_CATALOG_SERVICE_PRODUCT_OFFERING.code > PRODUCT_CATALOG_SERVICE_TARIFF.code // logical business-key relation; TARIFF 1-N PRODUCT_OFFERING
+Ref catalog_addon_offerings: PRODUCT_CATALOG_SERVICE_PRODUCT_OFFERING.code > PRODUCT_CATALOG_SERVICE_ADDON.code // logical business-key relation; ADDON 1-N PRODUCT_OFFERING
+Ref catalog_audit_logs: PRODUCT_CATALOG_SERVICE_AUDIT_LOG.entityId > PRODUCT_CATALOG_SERVICE_TARIFF.id // N-1, logical/internal audit target; TARIFF 1-N AUDIT_LOG
+Ref catalog_outbox_events: PRODUCT_CATALOG_SERVICE_OUTBOX_EVENT.aggregateId > PRODUCT_CATALOG_SERVICE_TARIFF.id // N-1, aggregate ref; TARIFF 1-N OUTBOX_EVENT
+
+// =========================================================
+// order-service / order_db
+// =========================================================
+
+Table ORDER_SERVICE_ORDER {
+  id uuid [primary key]
+  customerId uuid [note: 'Logical ref: CUSTOMER_SERVICE_CUSTOMER.id']
+  status varchar [note: 'DRAFT | PENDING_PAYMENT | PAID | FULFILLED | CANCELLED']
+  totalAmount decimal
+  currency varchar
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table ORDER_SERVICE_ORDER_ITEM {
+  id uuid [primary key]
+  orderId uuid [not null]
+  productCode varchar [note: 'Logical business key: PRODUCT_CATALOG_SERVICE_PRODUCT_OFFERING.code']
+  productType varchar [note: 'TARIFF | ADDON | VAS']
+  quantity integer
+  unitPrice decimal
+  lineTotal decimal
+}
+
+Table ORDER_SERVICE_SAGA_STATE {
+  id uuid [primary key]
+  orderId uuid [not null, unique]
+  currentStep varchar
+  payloadJson jsonb
+  status varchar
+  lastUpdated timestamp
+}
+
+Table ORDER_SERVICE_OUTBOX_EVENT {
+  id uuid [primary key]
+  aggregateId uuid
+  aggregateType varchar
+  eventType varchar [note: 'OrderCreated | OrderConfirmed | OrderCancelled']
+  payloadJson jsonb
+  status varchar [note: 'PENDING | PUBLISHED | FAILED']
+  createdAt timestamp
+  publishedAt timestamp
+}
+
+Table ORDER_SERVICE_IDEMPOTENCY_KEY {
+  id uuid [primary key]
+  idempotencyKey varchar [unique]
+  requestHash varchar
+  responseJson jsonb
+  createdAt timestamp
+  expiresAt timestamp
+}
+
+Table ORDER_SERVICE_AUDIT_LOG {
+  id uuid [primary key]
+  actorUserId uuid [note: 'Logical ref: IDENTITY_SERVICE_USER.id']
+  action varchar
+  entityType varchar
+  entityId uuid
+  oldValueJson jsonb
+  newValueJson jsonb
+  correlationId varchar
+  createdAt timestamp
+}
+
+Table ORDER_SERVICE_PROCESSED_EVENT {
+  id uuid [primary key]
+  eventId uuid [unique]
+  eventType varchar
+  sourceService varchar
+  aggregateId uuid
+  processedAt timestamp
+  status varchar [note: 'PROCESSED | FAILED']
+  errorMessage varchar
+  createdAt timestamp
+}
+
+Ref order_items: ORDER_SERVICE_ORDER_ITEM.orderId > ORDER_SERVICE_ORDER.id // N-1, physical FK; ORDER 1-N ORDER_ITEM
+Ref order_saga_state: ORDER_SERVICE_SAGA_STATE.orderId - ORDER_SERVICE_ORDER.id // 1-1, physical FK; ORDER 1-1 SAGA_STATE
+Ref order_outbox_events: ORDER_SERVICE_OUTBOX_EVENT.aggregateId > ORDER_SERVICE_ORDER.id // N-1, aggregate ref; ORDER 1-N OUTBOX_EVENT
+Ref order_audit_logs: ORDER_SERVICE_AUDIT_LOG.entityId > ORDER_SERVICE_ORDER.id // N-1, logical/internal audit target; ORDER 1-N AUDIT_LOG
+Ref order_customer: ORDER_SERVICE_ORDER.customerId > CUSTOMER_SERVICE_CUSTOMER.id // N-1, logical external ref; CUSTOMER 1-N ORDER
+Ref order_item_product: ORDER_SERVICE_ORDER_ITEM.productCode > PRODUCT_CATALOG_SERVICE_PRODUCT_OFFERING.code // N-1, logical business-key ref; PRODUCT_OFFERING 1-N ORDER_ITEM
+
+// =========================================================
+// subscription-service / subscription_db
+// =========================================================
+
+Table SUBSCRIPTION_SERVICE_SUBSCRIPTION {
+  id uuid [primary key]
+  customerId uuid [note: 'Logical ref: CUSTOMER_SERVICE_CUSTOMER.id']
+  msisdn varchar [not null]
+  tariffCode varchar [note: 'Logical business key: PRODUCT_CATALOG_SERVICE_TARIFF.code']
+  tariffSnapshotJson jsonb
+  status varchar [note: 'ACTIVE | SUSPENDED | TERMINATED']
+  activatedAt timestamp
+  suspendedAt timestamp
+  terminatedAt timestamp
+  createdAt timestamp
+}
+
+Table SUBSCRIPTION_SERVICE_MSISDN_POOL {
+  msisdn varchar [primary key]
+  status varchar [note: 'FREE | RESERVED | ALLOCATED']
+  reservedUntil timestamp
+  allocatedAt timestamp
+}
+
+Table SUBSCRIPTION_SERVICE_SIM_CARD {
+  iccid varchar [primary key]
+  imsi varchar [unique]
+  msisdn varchar
+  status varchar
+  assignedAt timestamp
+}
+
+Table SUBSCRIPTION_SERVICE_SUBSCRIPTION_STATUS_HISTORY {
+  id uuid [primary key]
+  subscriptionId uuid [not null]
+  oldStatus varchar
+  newStatus varchar
+  reason varchar
+  changedAt timestamp
+}
+
+Table SUBSCRIPTION_SERVICE_OUTBOX_EVENT {
+  id uuid [primary key]
+  aggregateId uuid
+  aggregateType varchar
+  eventType varchar [note: 'SubscriptionActivated | SubscriptionSuspended | SubscriptionTerminated']
+  payloadJson jsonb
+  status varchar
+  createdAt timestamp
+  publishedAt timestamp
+}
+
+Table SUBSCRIPTION_SERVICE_AUDIT_LOG {
+  id uuid [primary key]
+  actorUserId uuid [note: 'Logical ref: IDENTITY_SERVICE_USER.id']
+  action varchar
+  entityType varchar
+  entityId uuid
+  oldValueJson jsonb
+  newValueJson jsonb
+  correlationId varchar
+  createdAt timestamp
+}
+
+Table SUBSCRIPTION_SERVICE_PROCESSED_EVENT {
+  id uuid [primary key]
+  eventId uuid [unique]
+  eventType varchar
+  sourceService varchar
+  aggregateId uuid
+  processedAt timestamp
+  status varchar [note: 'PROCESSED | FAILED']
+  errorMessage varchar
+  createdAt timestamp
+}
+
+Ref subscription_msisdn: SUBSCRIPTION_SERVICE_SUBSCRIPTION.msisdn > SUBSCRIPTION_SERVICE_MSISDN_POOL.msisdn // N-1, physical FK; MSISDN_POOL 1-N SUBSCRIPTION
+Ref subscription_sim_msisdn: SUBSCRIPTION_SERVICE_SIM_CARD.msisdn > SUBSCRIPTION_SERVICE_MSISDN_POOL.msisdn // 0..1-N, physical FK; MSISDN_POOL 1-0..1 SIM_CARD
+Ref subscription_status_history: SUBSCRIPTION_SERVICE_SUBSCRIPTION_STATUS_HISTORY.subscriptionId > SUBSCRIPTION_SERVICE_SUBSCRIPTION.id // N-1, physical FK; SUBSCRIPTION 1-N STATUS_HISTORY
+Ref subscription_outbox_events: SUBSCRIPTION_SERVICE_OUTBOX_EVENT.aggregateId > SUBSCRIPTION_SERVICE_SUBSCRIPTION.id // N-1, aggregate ref; SUBSCRIPTION 1-N OUTBOX_EVENT
+Ref subscription_audit_logs: SUBSCRIPTION_SERVICE_AUDIT_LOG.entityId > SUBSCRIPTION_SERVICE_SUBSCRIPTION.id // N-1, logical/internal audit target; SUBSCRIPTION 1-N AUDIT_LOG
+Ref subscription_customer: SUBSCRIPTION_SERVICE_SUBSCRIPTION.customerId > CUSTOMER_SERVICE_CUSTOMER.id // N-1, logical external ref; CUSTOMER 1-N SUBSCRIPTION
+Ref subscription_tariff: SUBSCRIPTION_SERVICE_SUBSCRIPTION.tariffCode > PRODUCT_CATALOG_SERVICE_TARIFF.code // N-1, logical business-key ref; TARIFF 1-N SUBSCRIPTION
+
+// =========================================================
+// usage-service / usage_db
+// =========================================================
+
+Table USAGE_SERVICE_CDR_EVENT {
+  id uuid [primary key]
+  cdrRef varchar [unique]
+  subscriptionId uuid [note: 'Logical ref: SUBSCRIPTION_SERVICE_SUBSCRIPTION.id']
+  msisdn varchar
+  type varchar [note: 'VOICE | SMS | DATA']
+  quantity bigint
+  eventTime timestamp
+  rawPayloadJson jsonb
+  processedAt timestamp
+}
+
+Table USAGE_SERVICE_USAGE_RECORD {
+  id uuid [primary key]
+  subscriptionId uuid [note: 'Logical ref: SUBSCRIPTION_SERVICE_SUBSCRIPTION.id']
+  type varchar [note: 'VOICE | SMS | DATA']
+  quantity bigint
+  recordedAt timestamp
+  cdrRef varchar [unique]
+}
+
+Table USAGE_SERVICE_QUOTA {
+  id uuid [primary key]
+  subscriptionId uuid [note: 'Logical ref: SUBSCRIPTION_SERVICE_SUBSCRIPTION.id']
+  periodStart timestamp
+  periodEnd timestamp
+  minutesRemaining integer
+  smsRemaining integer
+  mbRemaining bigint
+  updatedAt timestamp
+}
+
+Table USAGE_SERVICE_USAGE_AGGREGATE {
+  id uuid [primary key]
+  subscriptionId uuid [note: 'Logical ref: SUBSCRIPTION_SERVICE_SUBSCRIPTION.id']
+  periodStart timestamp
+  periodEnd timestamp
+  voiceTotal bigint
+  smsTotal bigint
+  dataMbTotal bigint
+  overageAmount decimal
+  sentToBillingAt timestamp
+}
+
+Table USAGE_SERVICE_OUTBOX_EVENT {
+  id uuid [primary key]
+  aggregateId uuid
+  aggregateType varchar
+  eventType varchar [note: 'UsageRecorded | QuotaThresholdReached | QuotaExceeded | UsageAggregated']
+  payloadJson jsonb
+  status varchar
+  createdAt timestamp
+  publishedAt timestamp
+}
+
+Table USAGE_SERVICE_AUDIT_LOG {
+  id uuid [primary key]
+  actorUserId uuid [note: 'Logical ref: IDENTITY_SERVICE_USER.id']
+  action varchar
+  entityType varchar
+  entityId uuid
+  oldValueJson jsonb
+  newValueJson jsonb
+  correlationId varchar
+  createdAt timestamp
+}
+
+Table USAGE_SERVICE_PROCESSED_EVENT {
+  id uuid [primary key]
+  eventId uuid [unique]
+  eventType varchar
+  sourceService varchar
+  aggregateId uuid
+  processedAt timestamp
+  status varchar [note: 'PROCESSED | FAILED']
+  errorMessage varchar
+  createdAt timestamp
+}
+
+Ref usage_record_cdr: USAGE_SERVICE_USAGE_RECORD.cdrRef - USAGE_SERVICE_CDR_EVENT.cdrRef // 1-0..1, physical/logical ref; CDR_EVENT 1-0..1 USAGE_RECORD
+Ref usage_record_outbox: USAGE_SERVICE_OUTBOX_EVENT.aggregateId > USAGE_SERVICE_USAGE_RECORD.id // N-1, aggregate ref; USAGE_RECORD 1-N OUTBOX_EVENT
+Ref usage_audit_logs: USAGE_SERVICE_AUDIT_LOG.entityId > USAGE_SERVICE_USAGE_RECORD.id // N-1, logical/internal audit target; USAGE_RECORD 1-N AUDIT_LOG
+Ref usage_cdr_subscription: USAGE_SERVICE_CDR_EVENT.subscriptionId > SUBSCRIPTION_SERVICE_SUBSCRIPTION.id // N-1, logical external ref; SUBSCRIPTION 1-N CDR_EVENT
+Ref usage_record_subscription: USAGE_SERVICE_USAGE_RECORD.subscriptionId > SUBSCRIPTION_SERVICE_SUBSCRIPTION.id // N-1, logical external ref; SUBSCRIPTION 1-N USAGE_RECORD
+Ref usage_quota_subscription: USAGE_SERVICE_QUOTA.subscriptionId > SUBSCRIPTION_SERVICE_SUBSCRIPTION.id // N-1, logical external ref; SUBSCRIPTION 1-N QUOTA
+Ref usage_aggregate_subscription: USAGE_SERVICE_USAGE_AGGREGATE.subscriptionId > SUBSCRIPTION_SERVICE_SUBSCRIPTION.id // N-1, logical external ref; SUBSCRIPTION 1-N USAGE_AGGREGATE
+Ref usage_aggregate_records: USAGE_SERVICE_USAGE_RECORD.subscriptionId > USAGE_SERVICE_USAGE_AGGREGATE.subscriptionId // M-N logical grouping by subscription + period; no physical FK
+
+// =========================================================
+// billing-service / billing_db
+// =========================================================
+
+Table BILLING_SERVICE_BILL_RUN {
+  id uuid [primary key]
+  startedAt timestamp
+  completedAt timestamp
+  status varchar [note: 'RUNNING | COMPLETED | FAILED']
+  processedCount integer
+  failedCount integer
+}
+
+Table BILLING_SERVICE_INVOICE {
+  id uuid [primary key]
+  customerId uuid [note: 'Logical ref: CUSTOMER_SERVICE_CUSTOMER.id']
+  subscriptionId uuid [note: 'Logical ref: SUBSCRIPTION_SERVICE_SUBSCRIPTION.id']
+  billRunId uuid [note: 'Internal bill run reference']
+  billCycleId uuid [note: 'Internal bill cycle reference']
+  periodStart timestamp
+  periodEnd timestamp
+  subTotal decimal
+  tax decimal
+  grandTotal decimal
+  currency varchar
+  status varchar [note: 'DRAFT | ISSUED | PAID | OVERDUE | CANCELLED']
+  dueDate timestamp
+  issuedAt timestamp
+  pdfFileRef varchar
+}
+
+Table BILLING_SERVICE_INVOICE_LINE {
+  id uuid [primary key]
+  invoiceId uuid [not null]
+  description varchar
+  quantity integer
+  unitPrice decimal
+  lineTotal decimal
+  lineType varchar [note: 'MONTHLY_FEE | ADDON | OVERAGE | VAS | TAX']
+}
+
+Table BILLING_SERVICE_BILL_CYCLE {
+  id uuid [primary key]
+  customerId uuid [note: 'Logical ref: CUSTOMER_SERVICE_CUSTOMER.id']
+  dayOfMonth integer
+  nextRunDate timestamp
+  status varchar
+}
+
+Table BILLING_SERVICE_OUTBOX_EVENT {
+  id uuid [primary key]
+  aggregateId uuid
+  aggregateType varchar
+  eventType varchar [note: 'InvoiceGenerated | InvoicePaid | InvoiceOverdue']
+  payloadJson jsonb
+  status varchar
+  createdAt timestamp
+  publishedAt timestamp
+}
+
+Table BILLING_SERVICE_AUDIT_LOG {
+  id uuid [primary key]
+  actorUserId uuid [note: 'Logical ref: IDENTITY_SERVICE_USER.id']
+  action varchar
+  entityType varchar
+  entityId uuid
+  oldValueJson jsonb
+  newValueJson jsonb
+  correlationId varchar
+  createdAt timestamp
+}
+
+Table BILLING_SERVICE_PROCESSED_EVENT {
+  id uuid [primary key]
+  eventId uuid [unique]
+  eventType varchar
+  sourceService varchar
+  aggregateId uuid
+  processedAt timestamp
+  status varchar [note: 'PROCESSED | FAILED']
+  errorMessage varchar
+  createdAt timestamp
+}
+
+Ref billing_invoice_bill_run: BILLING_SERVICE_INVOICE.billRunId > BILLING_SERVICE_BILL_RUN.id // N-1, physical FK; BILL_RUN 1-N INVOICE
+Ref billing_invoice_bill_cycle: BILLING_SERVICE_INVOICE.billCycleId > BILLING_SERVICE_BILL_CYCLE.id // N-1, physical FK; BILL_CYCLE 1-N INVOICE
+Ref billing_invoice_lines: BILLING_SERVICE_INVOICE_LINE.invoiceId > BILLING_SERVICE_INVOICE.id // N-1, physical FK; INVOICE 1-N INVOICE_LINE
+Ref billing_invoice_outbox: BILLING_SERVICE_OUTBOX_EVENT.aggregateId > BILLING_SERVICE_INVOICE.id // N-1, aggregate ref; INVOICE 1-N OUTBOX_EVENT
+Ref billing_audit_logs: BILLING_SERVICE_AUDIT_LOG.entityId > BILLING_SERVICE_INVOICE.id // N-1, logical/internal audit target; INVOICE 1-N AUDIT_LOG
+Ref billing_cycle_customer: BILLING_SERVICE_BILL_CYCLE.customerId > CUSTOMER_SERVICE_CUSTOMER.id // N-1, logical external ref; CUSTOMER 1-N BILL_CYCLE
+Ref billing_invoice_customer: BILLING_SERVICE_INVOICE.customerId > CUSTOMER_SERVICE_CUSTOMER.id // N-1, logical external ref; CUSTOMER 1-N INVOICE
+Ref billing_invoice_subscription: BILLING_SERVICE_INVOICE.subscriptionId > SUBSCRIPTION_SERVICE_SUBSCRIPTION.id // N-1, logical external ref; SUBSCRIPTION 1-N INVOICE
+Ref billing_usage_input: BILLING_SERVICE_INVOICE.subscriptionId > USAGE_SERVICE_USAGE_AGGREGATE.subscriptionId // M-N logical billing input by subscription + period; no physical FK
+
+// =========================================================
+// payment-service / payment_db
+// =========================================================
+
+Table PAYMENT_SERVICE_PAYMENT {
+  id uuid [primary key]
+  invoiceId uuid [note: 'Logical ref: BILLING_SERVICE_INVOICE.id']
+  customerId uuid [note: 'Logical ref: CUSTOMER_SERVICE_CUSTOMER.id']
+  paymentMethodId uuid
+  amount decimal
+  currency varchar
+  method varchar [note: 'CREDIT_CARD | BANK_TRANSFER | WALLET']
+  status varchar [note: 'INITIATED | COMPLETED | FAILED | REFUNDED']
+  externalRef varchar
+  paidAt timestamp
+  createdAt timestamp
+}
+
+Table PAYMENT_SERVICE_PAYMENT_ATTEMPT {
+  id uuid [primary key]
+  paymentId uuid [not null]
+  attemptNo integer
+  responseJson jsonb
+  attemptedAt timestamp
+  status varchar
+}
+
+Table PAYMENT_SERVICE_PAYMENT_METHOD {
+  id uuid [primary key]
+  customerId uuid [note: 'Logical ref: CUSTOMER_SERVICE_CUSTOMER.id']
+  type varchar [note: 'CREDIT_CARD']
+  maskedCardNumber varchar
+  tokenRef varchar
+  isDefault boolean
+  createdAt timestamp
+}
+
+Table PAYMENT_SERVICE_IDEMPOTENCY_KEY {
+  id uuid [primary key]
+  idempotencyKey varchar [unique]
+  requestHash varchar
+  responseJson jsonb
+  createdAt timestamp
+  expiresAt timestamp
+}
+
+Table PAYMENT_SERVICE_PAYMENT_RETRY_SCHEDULE {
+  id uuid [primary key]
+  paymentId uuid [not null]
+  currentAttemptNo integer
+  nextRetryAt timestamp
+  retryDelayHours integer [note: '24 | 72 | 168']
+  status varchar [note: 'PENDING | RETRYING | COMPLETED | CANCELLED | EXHAUSTED']
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table PAYMENT_SERVICE_OUTBOX_EVENT {
+  id uuid [primary key]
+  aggregateId uuid
+  aggregateType varchar
+  eventType varchar [note: 'PaymentCompleted | PaymentFailed | PaymentRefunded']
+  payloadJson jsonb
+  status varchar
+  createdAt timestamp
+  publishedAt timestamp
+}
+
+Table PAYMENT_SERVICE_AUDIT_LOG {
+  id uuid [primary key]
+  actorUserId uuid [note: 'Logical ref: IDENTITY_SERVICE_USER.id']
+  action varchar
+  entityType varchar
+  entityId uuid
+  oldValueJson jsonb
+  newValueJson jsonb
+  correlationId varchar
+  createdAt timestamp
+}
+
+Table PAYMENT_SERVICE_PROCESSED_EVENT {
+  id uuid [primary key]
+  eventId uuid [unique]
+  eventType varchar
+  sourceService varchar
+  aggregateId uuid
+  processedAt timestamp
+  status varchar [note: 'PROCESSED | FAILED']
+  errorMessage varchar
+  createdAt timestamp
+}
+
+Ref payment_method_payments: PAYMENT_SERVICE_PAYMENT.paymentMethodId > PAYMENT_SERVICE_PAYMENT_METHOD.id // N-1, physical FK; PAYMENT_METHOD 1-N PAYMENT
+Ref payment_attempts: PAYMENT_SERVICE_PAYMENT_ATTEMPT.paymentId > PAYMENT_SERVICE_PAYMENT.id // N-1, physical FK; PAYMENT 1-N PAYMENT_ATTEMPT
+Ref payment_retry_schedule: PAYMENT_SERVICE_PAYMENT_RETRY_SCHEDULE.paymentId > PAYMENT_SERVICE_PAYMENT.id // N-1, physical FK; PAYMENT 1-N PAYMENT_RETRY_SCHEDULE
+Ref payment_outbox: PAYMENT_SERVICE_OUTBOX_EVENT.aggregateId > PAYMENT_SERVICE_PAYMENT.id // N-1, aggregate ref; PAYMENT 1-N OUTBOX_EVENT
+Ref payment_audit_logs: PAYMENT_SERVICE_AUDIT_LOG.entityId > PAYMENT_SERVICE_PAYMENT.id // N-1, logical/internal audit target; PAYMENT 1-N AUDIT_LOG
+Ref payment_invoice: PAYMENT_SERVICE_PAYMENT.invoiceId > BILLING_SERVICE_INVOICE.id // N-1, logical external ref; INVOICE 1-N PAYMENT
+Ref payment_customer: PAYMENT_SERVICE_PAYMENT.customerId > CUSTOMER_SERVICE_CUSTOMER.id // N-1, logical external ref; CUSTOMER 1-N PAYMENT
+Ref payment_method_customer: PAYMENT_SERVICE_PAYMENT_METHOD.customerId > CUSTOMER_SERVICE_CUSTOMER.id // N-1, logical external ref; CUSTOMER 1-N PAYMENT_METHOD
+
+// =========================================================
+// notification-service / notification_db
+// =========================================================
+
+Table NOTIFICATION_SERVICE_NOTIFICATION_TEMPLATE {
+  id uuid [primary key]
+  code varchar [unique]
+  channel varchar [note: 'SMS | EMAIL | PUSH']
+  locale varchar
+  subject varchar
+  bodyTemplate varchar
+  status varchar [note: 'ACTIVE | PASSIVE']
+  createdAt timestamp
+}
+
+Table NOTIFICATION_SERVICE_NOTIFICATION {
+  id uuid [primary key]
+  userId uuid [note: 'Optional logical ref: IDENTITY_SERVICE_USER.id']
+  customerId uuid [note: 'Logical ref: CUSTOMER_SERVICE_CUSTOMER.id']
+  templateCode varchar
+  channel varchar [note: 'SMS | EMAIL | PUSH']
+  payloadJson jsonb
+  status varchar [note: 'PENDING | SENT | FAILED']
+  sentAt timestamp
+  createdAt timestamp
+}
+
+Table NOTIFICATION_SERVICE_NOTIFICATION_DELIVERY_ATTEMPT {
+  id uuid [primary key]
+  notificationId uuid [not null]
+  attemptNo integer
+  providerResponseJson jsonb
+  status varchar
+  attemptedAt timestamp
+}
+
+Table NOTIFICATION_SERVICE_USER_COMMUNICATION_PREFERENCE {
+  id uuid [primary key]
+  customerId uuid [note: 'Logical ref: CUSTOMER_SERVICE_CUSTOMER.id']
+  smsOptIn boolean
+  emailOptIn boolean
+  pushOptIn boolean
+  locale varchar
+}
+
+Table NOTIFICATION_SERVICE_OUTBOX_EVENT {
+  id uuid [primary key]
+  aggregateId uuid
+  aggregateType varchar
+  eventType varchar
+  payloadJson jsonb
+  status varchar [note: 'PENDING | PUBLISHED | FAILED']
+  createdAt timestamp
+  publishedAt timestamp
+}
+
+Table NOTIFICATION_SERVICE_AUDIT_LOG {
+  id uuid [primary key]
+  actorUserId uuid [note: 'Logical ref: IDENTITY_SERVICE_USER.id']
+  action varchar
+  entityType varchar
+  entityId uuid
+  oldValueJson jsonb
+  newValueJson jsonb
+  correlationId varchar
+  createdAt timestamp
+}
+
+Table NOTIFICATION_SERVICE_PROCESSED_EVENT {
+  id uuid [primary key]
+  eventId uuid [unique]
+  eventType varchar
+  sourceService varchar
+  aggregateId uuid
+  processedAt timestamp
+  status varchar [note: 'PROCESSED | FAILED']
+  errorMessage varchar
+  createdAt timestamp
+}
+
+Ref notification_template: NOTIFICATION_SERVICE_NOTIFICATION.templateCode > NOTIFICATION_SERVICE_NOTIFICATION_TEMPLATE.code // N-1, physical/business key FK; TEMPLATE 1-N NOTIFICATION
+Ref notification_attempts: NOTIFICATION_SERVICE_NOTIFICATION_DELIVERY_ATTEMPT.notificationId > NOTIFICATION_SERVICE_NOTIFICATION.id // N-1, physical FK; NOTIFICATION 1-N DELIVERY_ATTEMPT
+Ref notification_outbox: NOTIFICATION_SERVICE_OUTBOX_EVENT.aggregateId > NOTIFICATION_SERVICE_NOTIFICATION.id // N-1, aggregate ref; NOTIFICATION 1-N OUTBOX_EVENT
+Ref notification_audit_logs: NOTIFICATION_SERVICE_AUDIT_LOG.entityId > NOTIFICATION_SERVICE_NOTIFICATION.id // N-1, logical/internal audit target; NOTIFICATION 1-N AUDIT_LOG
+Ref notification_customer: NOTIFICATION_SERVICE_NOTIFICATION.customerId > CUSTOMER_SERVICE_CUSTOMER.id // N-1, logical external ref; CUSTOMER 1-N NOTIFICATION
+Ref notification_preference_customer: NOTIFICATION_SERVICE_USER_COMMUNICATION_PREFERENCE.customerId > CUSTOMER_SERVICE_CUSTOMER.id // N-1, logical external ref; CUSTOMER 1-N USER_COMMUNICATION_PREFERENCE
+Ref notification_user: NOTIFICATION_SERVICE_NOTIFICATION.userId > IDENTITY_SERVICE_USER.id // N-1, optional logical external ref; USER 1-N NOTIFICATION
+
+// =========================================================
+// ticket-service / ticket_db
+// =========================================================
+
+Table TICKET_SERVICE_TICKET {
+  id uuid [primary key]
+  customerId uuid [note: 'Logical ref: CUSTOMER_SERVICE_CUSTOMER.id']
+  category varchar
+  priority varchar [note: 'LOW | MEDIUM | HIGH | CRITICAL']
+  status varchar [note: 'OPEN | ASSIGNED | IN_PROGRESS | RESOLVED | CLOSED']
+  slaDueAt timestamp
+  createdAt timestamp
+  resolvedAt timestamp
+}
+
+Table TICKET_SERVICE_TICKET_COMMENT {
+  id uuid [primary key]
+  ticketId uuid [not null]
+  authorId uuid [note: 'Logical ref: IDENTITY_SERVICE_USER.id']
+  body varchar
+  createdAt timestamp
+}
+
+Table TICKET_SERVICE_SLA_POLICY {
+  id uuid [primary key]
+  category varchar
+  priority varchar [note: 'LOW | MEDIUM | HIGH | CRITICAL']
+  responseTimeMinutes integer
+  resolutionTimeMinutes integer
+}
+
+Table TICKET_SERVICE_TICKET_ASSIGNMENT {
+  id uuid [primary key]
+  ticketId uuid [not null]
+  assignedToUserId uuid [note: 'Logical ref: IDENTITY_SERVICE_USER.id']
+  assignedTeam varchar
+  assignedAt timestamp
+}
+
+Table TICKET_SERVICE_OUTBOX_EVENT {
+  id uuid [primary key]
+  aggregateId uuid
+  aggregateType varchar
+  eventType varchar [note: 'TicketOpened | TicketAssigned | TicketResolved | SlaBreached']
+  payloadJson jsonb
+  status varchar
+  createdAt timestamp
+  publishedAt timestamp
+}
+
+Table TICKET_SERVICE_AUDIT_LOG {
+  id uuid [primary key]
+  actorUserId uuid [note: 'Logical ref: IDENTITY_SERVICE_USER.id']
+  action varchar
+  entityType varchar
+  entityId uuid
+  oldValueJson jsonb
+  newValueJson jsonb
+  correlationId varchar
+  createdAt timestamp
+}
+
+Table TICKET_SERVICE_PROCESSED_EVENT {
+  id uuid [primary key]
+  eventId uuid [unique]
+  eventType varchar
+  sourceService varchar
+  aggregateId uuid
+  processedAt timestamp
+  status varchar [note: 'PROCESSED | FAILED']
+  errorMessage varchar
+  createdAt timestamp
+}
+
+Ref ticket_sla_policy: TICKET_SERVICE_TICKET.category > TICKET_SERVICE_SLA_POLICY.category // N-1, logical policy match by category + priority; SLA_POLICY 1-N TICKET
+Ref ticket_comments: TICKET_SERVICE_TICKET_COMMENT.ticketId > TICKET_SERVICE_TICKET.id // N-1, physical FK; TICKET 1-N TICKET_COMMENT
+Ref ticket_assignments: TICKET_SERVICE_TICKET_ASSIGNMENT.ticketId > TICKET_SERVICE_TICKET.id // N-1, physical FK; TICKET 1-N TICKET_ASSIGNMENT
+Ref ticket_outbox: TICKET_SERVICE_OUTBOX_EVENT.aggregateId > TICKET_SERVICE_TICKET.id // N-1, aggregate ref; TICKET 1-N OUTBOX_EVENT
+Ref ticket_audit_logs: TICKET_SERVICE_AUDIT_LOG.entityId > TICKET_SERVICE_TICKET.id // N-1, logical/internal audit target; TICKET 1-N AUDIT_LOG
+Ref ticket_customer: TICKET_SERVICE_TICKET.customerId > CUSTOMER_SERVICE_CUSTOMER.id // N-1, logical external ref; CUSTOMER 1-N TICKET
+Ref ticket_comment_author: TICKET_SERVICE_TICKET_COMMENT.authorId > IDENTITY_SERVICE_USER.id // N-1, logical external ref; USER 1-N TICKET_COMMENT
+Ref ticket_assignment_user: TICKET_SERVICE_TICKET_ASSIGNMENT.assignedToUserId > IDENTITY_SERVICE_USER.id // N-1, logical external ref; USER 1-N TICKET_ASSIGNMENT

@@ -1,0 +1,74 @@
+version: "3.9"
+
+# =============================================================================
+# Telco CRM Platform - Lokal Gelistirme Altyapisi
+#
+# NOT: PostgreSQL ve pgAdmin bu compose'a DAHIL DEGIL — kullanici kendi
+# Docker PostgreSQL container'ini kullaniyor (admin/admin).
+# Veritabani olusturma talimati: docker/postgres/init-databases.sql
+#
+# Bu compose Kafka, Redis, Zipkin ve MailHog'u ayaga kaldirir.
+# =============================================================================
+
+services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: telcox-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: telcox-kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      CLUSTER_ID: telcox-kafka-cluster-id-01
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: telcox-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: telcox
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: telcox-zipkin
+    ports:
+      - "9411:9411"
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: telcox-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"

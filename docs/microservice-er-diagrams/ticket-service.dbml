@@ -1,0 +1,83 @@
+// =============================================================================
+// ticket-service / ticket_db
+// Spring microservice database boundary: ticket-service
+//
+// FK politikasi:
+//   * Servis ICI iliskiler fiziksel FK ile kurulur.
+//   * customerId, assignedToUserId, createdByUserId, authorUserId,
+//     uploadedByUserId, changedByUserId yalnizca UUID olarak tutulur, FK YOKTUR.
+// =============================================================================
+
+Table TICKET_SERVICE_TICKET {
+  id uuid [primary key]
+  ticketNumber varchar [unique]
+  customerId uuid [not null, note: 'logical ref -> customer-service.CUSTOMER.id']
+  subject varchar
+  description text
+  ticketType varchar [note: 'BILLING | TECHNICAL | SALES | COMPLAINT']
+  priority varchar [note: 'LOW | MEDIUM | HIGH | CRITICAL']
+  status varchar [note: 'OPEN | IN_PROGRESS | WAITING_CUSTOMER | RESOLVED | CLOSED']
+  slaDueAt timestamp
+  assignedToUserId uuid [note: 'logical ref -> identity-service.USER.id']
+  createdByUserId uuid [note: 'logical ref -> identity-service.USER.id']
+  createdAt timestamp
+  resolvedAt timestamp
+  closedAt timestamp
+}
+
+Table TICKET_SERVICE_COMMENT {
+  id uuid [primary key]
+  ticketId uuid [not null]
+  authorUserId uuid [note: 'logical ref -> identity-service.USER.id']
+  commentText text
+  isInternal boolean
+  createdAt timestamp
+}
+
+Table TICKET_SERVICE_ATTACHMENT {
+  id uuid [primary key]
+  ticketId uuid [not null]
+  fileName varchar
+  fileUrl varchar
+  fileSize bigint
+  uploadedByUserId uuid [note: 'logical ref -> identity-service.USER.id']
+  uploadedAt timestamp
+}
+
+Table TICKET_SERVICE_STATUS_HISTORY {
+  id uuid [primary key]
+  ticketId uuid [not null]
+  oldStatus varchar
+  newStatus varchar
+  changedAt timestamp
+  changedByUserId uuid [note: 'logical ref -> identity-service.USER.id']
+  comment varchar
+}
+
+Table TICKET_SERVICE_OUTBOX_EVENT {
+  id uuid [primary key]
+  aggregateId uuid [note: 'soft ref - heterojen aggregate tipleri, FK YOK']
+  aggregateType varchar
+  eventType varchar
+  payloadJson jsonb
+  status varchar [note: 'PENDING | PUBLISHED | FAILED']
+  createdAt timestamp
+  publishedAt timestamp
+}
+
+Table TICKET_SERVICE_PROCESSED_EVENT {
+  id uuid [primary key]
+  eventId uuid [unique]
+  eventType varchar
+  sourceService varchar
+  aggregateId uuid
+  processedAt timestamp
+  status varchar [note: 'PROCESSED | FAILED']
+  errorMessage varchar
+  createdAt timestamp
+}
+
+// --- Servis ici fiziksel FK iliskileri ---
+Ref ticket_comments:        TICKET_SERVICE_COMMENT.ticketId        > TICKET_SERVICE_TICKET.id  // N-1, physical FK
+Ref ticket_attachments:     TICKET_SERVICE_ATTACHMENT.ticketId     > TICKET_SERVICE_TICKET.id  // N-1, physical FK
+Ref ticket_status_history:  TICKET_SERVICE_STATUS_HISTORY.ticketId > TICKET_SERVICE_TICKET.id  // N-1, physical FK

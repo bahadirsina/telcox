@@ -1,0 +1,9 @@
+-Xlint:none
+--source-path
+/dev/null
+-d
+/tmp/telcox-syntax-check
+-proc:none
+-Werror
+-implicit:none
+./telco-common/src/main/java/com/telcox/common/dto/PageResponse.java

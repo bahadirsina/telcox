@@ -1,0 +1,97 @@
+// =============================================================================
+// payment-service / payment_db
+// Spring microservice database boundary: payment-service
+//
+// FK politikasi:
+//   * Servis ICI iliskiler fiziksel FK ile kurulur.
+//   * customerId, invoiceId gibi servis DISI referanslar yalnizca UUID
+//     olarak tutulur, FK YOKTUR.
+// =============================================================================
+
+Table PAYMENT_SERVICE_PAYMENT_METHOD {
+  id uuid [primary key]
+  customerId uuid [not null, note: 'logical ref -> customer-service.CUSTOMER.id']
+  methodType varchar [note: 'CARD | BANK_ACCOUNT | AUTO_DEBIT | WALLET']
+  providerToken varchar [note: 'Encrypted PSP token']
+  maskedAccount varchar
+  expiryMonth int
+  expiryYear int
+  isDefault boolean
+  status varchar [note: 'ACTIVE | EXPIRED | REVOKED']
+  createdAt timestamp
+}
+
+Table PAYMENT_SERVICE_PAYMENT {
+  id uuid [primary key]
+  paymentReference varchar [unique]
+  customerId uuid [not null, note: 'logical ref -> customer-service.CUSTOMER.id']
+  invoiceId uuid [note: 'logical ref -> billing-service.INVOICE.id']
+  paymentMethodId uuid
+  amount numeric
+  currency varchar
+  status varchar [note: 'PENDING | AUTHORIZED | CAPTURED | FAILED | REFUNDED']
+  initiatedAt timestamp
+  completedAt timestamp
+  failureReason varchar
+}
+
+Table PAYMENT_SERVICE_TRANSACTION {
+  id uuid [primary key]
+  paymentId uuid [not null]
+  transactionType varchar [note: 'AUTHORIZE | CAPTURE | REFUND | CHARGEBACK']
+  providerTxnId varchar
+  amount numeric
+  status varchar
+  processedAt timestamp
+  rawResponseJson jsonb
+}
+
+Table PAYMENT_SERVICE_REFUND {
+  id uuid [primary key]
+  paymentId uuid [not null]
+  amount numeric
+  reason varchar
+  status varchar [note: 'PENDING | COMPLETED | FAILED']
+  requestedAt timestamp
+  completedAt timestamp
+}
+
+Table PAYMENT_SERVICE_AUDIT_LOG {
+  id uuid [primary key]
+  actorUserId uuid [note: 'logical ref -> identity-service.USER.id']
+  action varchar
+  entityType varchar
+  entityId uuid
+  oldValueJson jsonb
+  newValueJson jsonb
+  correlationId varchar
+  createdAt timestamp
+}
+
+Table PAYMENT_SERVICE_OUTBOX_EVENT {
+  id uuid [primary key]
+  aggregateId uuid [note: 'soft ref - heterojen aggregate tipleri, FK YOK']
+  aggregateType varchar
+  eventType varchar
+  payloadJson jsonb
+  status varchar [note: 'PENDING | PUBLISHED | FAILED']
+  createdAt timestamp
+  publishedAt timestamp
+}
+
+Table PAYMENT_SERVICE_PROCESSED_EVENT {
+  id uuid [primary key]
+  eventId uuid [unique]
+  eventType varchar
+  sourceService varchar
+  aggregateId uuid
+  processedAt timestamp
+  status varchar [note: 'PROCESSED | FAILED']
+  errorMessage varchar
+  createdAt timestamp
+}
+
+// --- Servis ici fiziksel FK iliskileri ---
+Ref payment_method_ref:     PAYMENT_SERVICE_PAYMENT.paymentMethodId > PAYMENT_SERVICE_PAYMENT_METHOD.id  // N-1, physical FK (nullable - tek seferlik kart icin)
+Ref payment_transactions:   PAYMENT_SERVICE_TRANSACTION.paymentId   > PAYMENT_SERVICE_PAYMENT.id         // N-1, physical FK
+Ref payment_refunds:        PAYMENT_SERVICE_REFUND.paymentId        > PAYMENT_SERVICE_PAYMENT.id         // N-1, physical FK

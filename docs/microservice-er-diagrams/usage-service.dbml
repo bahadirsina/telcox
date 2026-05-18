@@ -1,0 +1,77 @@
+// =============================================================================
+// usage-service / usage_db
+// Spring microservice database boundary: usage-service
+//
+// FK politikasi:
+//   * Servis ICI iliskiler (USAGE_RECORD <-> USAGE_AGGREGATE <-> QUOTA) ayni
+//     aggregate icin paralel yazildigindan fiziksel FK BAGIMSIZ tutulmustur;
+//     bu tablolarin tamami 'subscriptionId' logical ref ile baglanir.
+//   * Servis DISI subscriptionId/msisdn yalnizca UUID olarak tutulur, FK YOKTUR.
+// =============================================================================
+
+Table USAGE_SERVICE_USAGE_RECORD {
+  id uuid [primary key]
+  subscriptionId uuid [not null, note: 'logical ref -> subscription-service.SUBSCRIPTION.id']
+  msisdn varchar [note: 'denormalized for query speed']
+  recordType varchar [note: 'VOICE | SMS | DATA']
+  startTime timestamp
+  endTime timestamp
+  durationSeconds int
+  dataVolumeBytes bigint
+  destinationNumber varchar
+  location varchar
+  cost numeric
+  currency varchar
+  isBilled boolean
+  createdAt timestamp
+}
+
+Table USAGE_SERVICE_USAGE_AGGREGATE {
+  id uuid [primary key]
+  subscriptionId uuid [not null, note: 'logical ref -> subscription-service.SUBSCRIPTION.id']
+  periodStart date
+  periodEnd date
+  totalVoiceSeconds bigint
+  totalSmsCount bigint
+  totalDataBytes bigint
+  totalCost numeric
+  currency varchar
+}
+
+Table USAGE_SERVICE_QUOTA {
+  id uuid [primary key]
+  subscriptionId uuid [not null, note: 'logical ref -> subscription-service.SUBSCRIPTION.id']
+  quotaType varchar [note: 'VOICE_MIN | SMS_COUNT | DATA_MB']
+  totalAllowance numeric
+  usedAmount numeric
+  remainingAmount numeric
+  periodStart timestamp
+  periodEnd timestamp
+}
+
+Table USAGE_SERVICE_OUTBOX_EVENT {
+  id uuid [primary key]
+  aggregateId uuid [note: 'soft ref - heterojen aggregate tipleri, FK YOK']
+  aggregateType varchar
+  eventType varchar
+  payloadJson jsonb
+  status varchar [note: 'PENDING | PUBLISHED | FAILED']
+  createdAt timestamp
+  publishedAt timestamp
+}
+
+Table USAGE_SERVICE_PROCESSED_EVENT {
+  id uuid [primary key]
+  eventId uuid [unique]
+  eventType varchar
+  sourceService varchar
+  aggregateId uuid
+  processedAt timestamp
+  status varchar [note: 'PROCESSED | FAILED']
+  errorMessage varchar
+  createdAt timestamp
+}
+
+// usage-service icinde servis-ici fiziksel FK yoktur:
+// USAGE_RECORD, USAGE_AGGREGATE ve QUOTA bagimsiz olarak subscriptionId
+// uzerinden ayni mantiksal varliga (Subscription) referans verir.

@@ -1,0 +1,50 @@
+# =============================================================================
+# Tum servisler icin ortak (default) konfigurasyon.
+# Servis bazinda override icin: services/<service-name>/src/main/resources/application.yml
+# =============================================================================
+
+spring:
+  jackson:
+    date-format: yyyy-MM-dd'T'HH:mm:ssXXX
+    time-zone: UTC
+    default-property-inclusion: non_null
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,loggers
+  endpoint:
+    health:
+      show-details: when_authorized
+  tracing:
+    sampling:
+      probability: 1.0
+
+logging:
+  pattern:
+    level: '%5p [${spring.application.name:-},%X{traceId:-},%X{spanId:-}]'
+  level:
+    root: INFO
+    com.telcox: DEBUG
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      default:
+        sliding-window-size: 20
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 5
+  retry:
+    instances:
+      default:
+        max-attempts: 3
+        wait-duration: 500ms

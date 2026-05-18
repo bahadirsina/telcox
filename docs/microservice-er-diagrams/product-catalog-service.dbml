@@ -1,0 +1,96 @@
+// =============================================================================
+// product-catalog-service / product_db
+// Spring microservice database boundary: product-catalog-service
+//
+// FK politikasi:
+//   * Servis ICI iliskiler fiziksel FK ile kurulur ('ref:' notasyonu).
+//   * Servis DISI referans bu serviste yoktur (master catalog servisi).
+// =============================================================================
+
+Table PRODUCT_SERVICE_PRODUCT {
+  id uuid [primary key]
+  code varchar [unique]
+  name varchar
+  description text
+  productType varchar [note: 'PLAN | ADDON | DEVICE | SERVICE']
+  status varchar [note: 'DRAFT | ACTIVE | RETIRED']
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table PRODUCT_SERVICE_PLAN {
+  id uuid [primary key]
+  productId uuid [unique, not null, note: '1-1 alt-tip extension; PRODUCT.productType=PLAN olunca olusur']
+  planType varchar [note: 'PREPAID | POSTPAID | HYBRID']
+  commitmentMonths int
+  monthlyPrice numeric
+  currency varchar
+  validFrom date
+  validTo date
+}
+
+Table PRODUCT_SERVICE_PLAN_FEATURE {
+  id uuid [primary key]
+  planId uuid [not null]
+  featureType varchar [note: 'VOICE_MIN | SMS_COUNT | DATA_MB | INTL_MIN']
+  allowance numeric
+  unit varchar
+  isUnlimited boolean
+}
+
+Table PRODUCT_SERVICE_PRICE {
+  id uuid [primary key]
+  productId uuid [not null]
+  price numeric
+  currency varchar
+  taxIncluded boolean
+  validFrom date
+  validTo date
+}
+
+Table PRODUCT_SERVICE_CATEGORY {
+  id uuid [primary key]
+  code varchar [unique]
+  name varchar
+  parentCategoryId uuid [note: 'self ref - alt kategori']
+}
+
+Table PRODUCT_SERVICE_PRODUCT_CATEGORY {
+  productId uuid [not null]
+  categoryId uuid [not null]
+
+  indexes {
+    (productId, categoryId) [pk]
+  }
+}
+
+Table PRODUCT_SERVICE_OUTBOX_EVENT {
+  id uuid [primary key]
+  aggregateId uuid [note: 'soft ref - heterojen aggregate tipleri, FK YOK']
+  aggregateType varchar
+  eventType varchar
+  payloadJson jsonb
+  status varchar [note: 'PENDING | PUBLISHED | FAILED']
+  createdAt timestamp
+  publishedAt timestamp
+}
+
+Table PRODUCT_SERVICE_PROCESSED_EVENT {
+  id uuid [primary key]
+  eventId uuid [unique]
+  eventType varchar
+  sourceService varchar
+  aggregateId uuid
+  processedAt timestamp
+  status varchar [note: 'PROCESSED | FAILED']
+  errorMessage varchar
+  createdAt timestamp
+}
+
+// --- Servis ici fiziksel FK iliskileri ---
+Ref product_plan:                PRODUCT_SERVICE_PLAN.productId             - PRODUCT_SERVICE_PRODUCT.id   // 1-1, physical FK
+Ref product_plan_features:       PRODUCT_SERVICE_PLAN_FEATURE.planId        > PRODUCT_SERVICE_PLAN.id      // N-1, physical FK
+Ref product_prices:              PRODUCT_SERVICE_PRICE.productId            > PRODUCT_SERVICE_PRODUCT.id   // N-1, physical FK
+Ref product_category_parent:     PRODUCT_SERVICE_CATEGORY.parentCategoryId  > PRODUCT_SERVICE_CATEGORY.id  // self-ref, physical FK (nullable)
+Ref product_categories_product:  PRODUCT_SERVICE_PRODUCT_CATEGORY.productId  > PRODUCT_SERVICE_PRODUCT.id   // N-1, physical FK
+Ref product_categories_category: PRODUCT_SERVICE_PRODUCT_CATEGORY.categoryId > PRODUCT_SERVICE_CATEGORY.id  // N-1, physical FK; PRODUCT M-N CATEGORY
