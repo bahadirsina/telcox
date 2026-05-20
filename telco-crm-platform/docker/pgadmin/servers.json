@@ -1,0 +1,94 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "identity-postgres",
+      "Group": "Telcox CRM",
+      "Host": "identity-postgres",
+      "Port": 5432,
+      "MaintenanceDB": "identity_db",
+      "Username": "telcox",
+      "SSLMode": "prefer"
+    },
+    "2": {
+      "Name": "customer-postgres",
+      "Group": "Telcox CRM",
+      "Host": "customer-postgres",
+      "Port": 5432,
+      "MaintenanceDB": "customer_db",
+      "Username": "telcox",
+      "SSLMode": "prefer"
+    },
+    "3": {
+      "Name": "product-postgres",
+      "Group": "Telcox CRM",
+      "Host": "product-postgres",
+      "Port": 5432,
+      "MaintenanceDB": "product_db",
+      "Username": "telcox",
+      "SSLMode": "prefer"
+    },
+    "4": {
+      "Name": "order-postgres",
+      "Group": "Telcox CRM",
+      "Host": "order-postgres",
+      "Port": 5432,
+      "MaintenanceDB": "order_db",
+      "Username": "telcox",
+      "SSLMode": "prefer"
+    },
+    "5": {
+      "Name": "subscription-postgres",
+      "Group": "Telcox CRM",
+      "Host": "subscription-postgres",
+      "Port": 5432,
+      "MaintenanceDB": "subscription_db",
+      "Username": "telcox",
+      "SSLMode": "prefer"
+    },
+    "6": {
+      "Name": "usage-postgres",
+      "Group": "Telcox CRM",
+      "Host": "usage-postgres",
+      "Port": 5432,
+      "MaintenanceDB": "usage_db",
+      "Username": "telcox",
+      "SSLMode": "prefer"
+    },
+    "7": {
+      "Name": "billing-postgres",
+      "Group": "Telcox CRM",
+      "Host": "billing-postgres",
+      "Port": 5432,
+      "MaintenanceDB": "billing_db",
+      "Username": "telcox",
+      "SSLMode": "prefer"
+    },
+    "8": {
+      "Name": "payment-postgres",
+      "Group": "Telcox CRM",
+      "Host": "payment-postgres",
+      "Port": 5432,
+      "MaintenanceDB": "payment_db",
+      "Username": "telcox",
+      "SSLMode": "prefer"
+    },
+    "9": {
+      "Name": "notification-postgres",
+      "Group": "Telcox CRM",
+      "Host": "notification-postgres",
+      "Port": 5432,
+      "MaintenanceDB": "notification_db",
+      "Username": "telcox",
+      "SSLMode": "prefer"
+    },
+    "10": {
+      "Name": "ticket-postgres",
+      "Group": "Telcox CRM",
+      "Host": "ticket-postgres",
+      "Port": 5432,
+      "MaintenanceDB": "ticket_db",
+      "Username": "telcox",
+      "SSLMode": "prefer"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Telco CRM Platform
 
-Telekomünikasyon CRM platformu — Spring Boot 3 + Java 21 ile geliştirilen, **microservices** mimarisi ve **database-per-service** paterni uygulayan eğitim projesi.
+Telekomünikasyon CRM platformu — Spring Boot 3 + Java 21 ile geliştirilen, **microservices** mimarisi, **database-per-service** ve **multi-module Maven** paternlerini uygulayan eğitim projesi.
 
 Detaylı analiz: [`/Users/tamerakdeniz/Personal/telcox/docs/telco-crm-microservices-mvp 2026-05-15 pmt 18.41.50.docx`](../docs/)
 
@@ -11,34 +11,37 @@ ER diyagramları: [`docs/microservice-er-diagrams/`](../docs/microservice-er-dia
 ## Mimari Özet
 
 ### Database-per-Service Pattern
-Her mikroservis **kendi PostgreSQL veritabanına** sahiptir. Servisler arası referanslar `FOREIGN KEY` ile değil, **UUID/business key** ile tutulur. Tutarlılık `Outbox + Inbox (Processed Event)` pattern ile event-driven sağlanır.
+Her mikroservis **kendi PostgreSQL container'ına** sahiptir. Servisler arası referanslar `FOREIGN KEY` ile değil, **UUID/business key** ile tutulur. Tutarlılık `Outbox + Inbox (Processed Event)` pattern ile event-driven sağlanır.
 
-| Servis | Port | Database |
-|---|---|---|
-| `api-gateway` | 8080 | — |
-| `discovery-server` (Eureka) | 8761 | — |
-| `config-server` | 8888 | — |
-| `identity-service` | 9001 | `identity_db` |
-| `customer-service` | 9002 | `customer_db` |
-| `product-catalog-service` | 9003 | `product_db` |
-| `order-service` | 9004 | `order_db` |
-| `subscription-service` | 9005 | `subscription_db` |
-| `usage-service` | 9006 | `usage_db` |
-| `billing-service` | 9007 | `billing_db` |
-| `payment-service` | 9008 | `payment_db` |
-| `notification-service` | 9009 | `notification_db` |
-| `ticket-service` | 9010 | `ticket_db` |
+| Servis | App Port | PostgreSQL Container | Host Port | Database |
+|---|---|---|---|---|
+| `api-gateway` | 8080 | — | — | — |
+| `discovery-server` (Eureka) | 8761 | — | — | — |
+| `config-server` | 8888 | — | — | — |
+| `identity-service` | 9001 | `identity-postgres` | 5432 | `identity_db` |
+| `customer-service` | 9002 | `customer-postgres` | 5433 | `customer_db` |
+| `product-catalog-service` | 9003 | `product-postgres` | 5434 | `product_db` |
+| `order-service` | 9004 | `order-postgres` | 5435 | `order_db` |
+| `subscription-service` | 9005 | `subscription-postgres` | 5436 | `subscription_db` |
+| `usage-service` | 9006 | `usage-postgres` | 5437 | `usage_db` |
+| `billing-service` | 9007 | `billing-postgres` | 5438 | `billing_db` |
+| `payment-service` | 9008 | `payment-postgres` | 5439 | `payment_db` |
+| `notification-service` | 9009 | `notification-postgres` | 5440 | `notification_db` |
+| `ticket-service` | 9010 | `ticket-postgres` | 5441 | `ticket_db` |
+
+> **Önemli:** Her mikroservis kendine ait **bağımsız bir PostgreSQL Docker container'ı** üzerinde çalışır. Container'lar tek bir Docker network (`telcox-net`) üzerinde haberleşir; servisler birbirinin DB'sine doğrudan erişemez, yalnızca **REST/Feign** veya **Kafka event'leri** ile haberleşir.
 
 ### Multi-Module Maven Yapısı
 ```
-telco-crm-platform/                  (parent POM)
+telco-crm-platform/                  (parent POM — BOM ve modül listesi)
+├── docker-compose.yml               (tüm sistemi ayağa kaldırır)
 ├── telco-common/                    (paylaşılan kütüphane: DTO, exception, event)
 ├── infrastructure/
 │   ├── discovery-server/            (Eureka)
 │   ├── config-server/               (Spring Cloud Config - native, classpath)
 │   └── api-gateway/                 (Spring Cloud Gateway)
 └── services/
-    ├── identity-service/
+    ├── identity-service/            (her servis kendi Dockerfile'ı ile)
     ├── customer-service/
     ├── product-catalog-service/
     ├── order-service/
@@ -60,7 +63,7 @@ telco-crm-platform/                  (parent POM)
 | Framework | Spring Boot | 3.3.5 |
 | Spring Cloud | Gateway, Config, Eureka, OpenFeign | 2023.0.3 |
 | Build | Maven Multi-Module | 3.9+ |
-| Database | PostgreSQL | 16 |
+| Database | PostgreSQL | 16 (her servise ayrı container) |
 | Cache / Idempotency | Redis | 7 |
 | Broker | Apache Kafka (KRaft) | 7.7.1 |
 | Migration | Flyway | (BOM) |
@@ -71,75 +74,99 @@ telco-crm-platform/                  (parent POM)
 | Resilience | Resilience4j | 2.2.0 |
 | Observability | Micrometer + Zipkin + OpenTelemetry | (BOM) |
 | Test | JUnit 5, Mockito, Testcontainers | 1.20.4 |
+| Container | Docker + Docker Compose v2 | — |
 
 ---
 
-## Hızlı Başlangıç
+## Hızlı Başlangıç (Tek Komutla Tüm Sistem)
 
-### 1. Altyapıyı Ayağa Kaldır
+### Önkoşullar
+- JDK 21
+- Maven 3.9+
+- Docker Desktop (veya Docker Engine + Compose v2)
+- Host portları **5432-5441**, **6379**, **8080**, **8025**, **8090**, **8761**, **8888**, **9001-9010**, **9092**, **9411**, **5050** boş olmalı
+
+### 1. JAR'ları Üret
 
 ```bash
 cd telco-crm-platform
-docker compose up -d
+mvn clean package -DskipTests
 ```
 
-Bu komut şunları başlatır:
-- **PostgreSQL** (5432) — 10 servis için ayrı veritabanları otomatik oluşturulur
-- **Redis** (6379)
-- **Kafka** (9092) — KRaft mode, Zookeepersız
-- **Kafka UI** (http://localhost:8090)
-- **Zipkin** (http://localhost:9411)
-- **MailHog** (http://localhost:8025) — SMTP test arayüzü
-- **pgAdmin** (http://localhost:5050) — `admin@telcox.local` / `admin`
+Bu adım `telco-common`'ı yerel Maven cache'e (`~/.m2/repository`) yazar ve 13 servis için `target/*.jar` üretir. Dockerfile'lar bu jar'ları kullanır.
 
-### 2. Tüm Modülleri Derle (ZORUNLU İLK ADIM)
-
-> **Önemli:** Bu adım `telco-common` shared kütüphanesini yerel Maven cache'ine (`~/.m2/repository`) yükler. Bu yapılmadan tek bir servis başlatmayı denersen `Could not find artifact com.telcox:telco-common` hatası alırsın.
-
-Proje **root dizininden** (parent POM olan yerden) çalıştır:
+### 2. Tüm Sistemi Ayağa Kaldır
 
 ```bash
-cd /path/to/telco-crm-platform     # parent pom.xml'in olduğu dizin
-mvn clean install -DskipTests
+docker compose up -d --build
 ```
 
-Bir kere yaptıktan sonra her servisi bağımsız çalıştırabilirsin. `telco-common`'da değişiklik yaparsan tekrar `install` etmen gerekir.
+Bu komut **28 container**'ı paralel ayağa kaldırır:
 
-### 3. Servisleri Sırayla Başlat
+| Grup | Container'lar |
+|---|---|
+| **10 ayrı PostgreSQL** | `identity-postgres`, `customer-postgres`, `product-postgres`, `order-postgres`, `subscription-postgres`, `usage-postgres`, `billing-postgres`, `payment-postgres`, `notification-postgres`, `ticket-postgres` |
+| **3 altyapı servisi** | `discovery-server` (Eureka), `config-server`, `api-gateway` |
+| **10 iş mikroservisi** | `identity-service`, `customer-service`, `product-catalog-service`, `order-service`, `subscription-service`, `usage-service`, `billing-service`, `payment-service`, `notification-service`, `ticket-service` |
+| **Destek servisler** | `redis`, `kafka`, `kafka-ui`, `zipkin`, `mailhog`, `pgadmin` |
 
-Aşağıdaki sırayla 3 ayrı terminalde başlat:
+Her servis kendi PG container'ını `service_healthy` ile bekler; Kafka ve discovery-server hazır olmadan açılmaz.
+
+### 3. Ayağa Kalkış Durumunu İzle
 
 ```bash
-# Terminal 1 — Discovery (Eureka)
-cd infrastructure/discovery-server
-mvn spring-boot:run
-
-# Terminal 2 — Config Server
-cd infrastructure/config-server
-mvn spring-boot:run
-
-# Terminal 3 — API Gateway
-cd infrastructure/api-gateway
-mvn spring-boot:run
+docker compose ps                           # tum container'lar
+docker compose logs -f identity-service     # tek servisin log'u
+docker compose logs --tail=50 -f            # tum sistem (uzun olur)
 ```
 
-Sonra herhangi bir business servisi başlat:
+### 4. Sağlık Kontrolü
+
+| Endpoint | Adres |
+|---|---|
+| Eureka dashboard | http://localhost:8761 |
+| API Gateway routes | http://localhost:8080/actuator/gateway/routes |
+| Identity Swagger | http://localhost:9001/swagger-ui.html |
+| Kafka UI | http://localhost:8090 |
+| Zipkin | http://localhost:9411 |
+| MailHog (SMTP UI) | http://localhost:8025 |
+| pgAdmin | http://localhost:5050 (admin@telcox.local / admin) |
+
+pgAdmin açılınca **10 PostgreSQL sunucusu** "Telcox CRM" grubunda otomatik tanımlı gelir; her birinin şifresi `telcox`.
+
+### 5. Sistemi Durdur / Sıfırla
 
 ```bash
-cd services/identity-service
-mvn spring-boot:run
+docker compose down                # container'lari durdurur (veriler kalir)
+docker compose down -v             # +veri volume'lerini de siler (temiz baslangic)
 ```
 
-> **Alternatif (tek komut):** Root dizinden ayrılmadan, otomatik bağımlılık derlemesiyle:
-> ```bash
-> mvn spring-boot:run -pl services/identity-service -am
-> ```
-> `-pl` (projects list) sadece o modülü çalıştırır, `-am` (also-make) bağımlı modülleri de build eder.
+---
 
-### 4. Servisleri Doğrula
-- Eureka dashboard: http://localhost:8761
-- Gateway routes: http://localhost:8080/actuator/gateway/routes
-- Identity Swagger: http://localhost:9001/swagger-ui.html
+## Lokal Geliştirme (mvn spring-boot:run)
+
+Tüm container'ları başlatmadan, sadece **PostgreSQL** + **Kafka** + **Redis** ayağa kaldırıp tek bir servisi IDE/terminal'den çalıştırabilirsin.
+
+```bash
+# Sadece altyapi + tum PG'leri baslat
+docker compose up -d \
+  identity-postgres customer-postgres product-postgres order-postgres \
+  subscription-postgres usage-postgres billing-postgres payment-postgres \
+  notification-postgres ticket-postgres \
+  redis kafka mailhog
+
+# Discovery + Config + Gateway'i lokal calistir
+mvn -pl infrastructure/discovery-server spring-boot:run     # Terminal 1
+mvn -pl infrastructure/config-server    spring-boot:run     # Terminal 2
+mvn -pl infrastructure/api-gateway      spring-boot:run     # Terminal 3
+
+# Identity service'i lokal calistir
+mvn -pl services/identity-service spring-boot:run           # Terminal 4
+```
+
+`application.yml` default değerleri her servisin doğru host port'una bağlanır (`identity` → `localhost:5432`, `customer` → `localhost:5433`, vb.).
+
+> `.env.example` dosyasını `.env` olarak kopyalayıp override edebilirsin.
 
 ---
 
@@ -147,7 +174,8 @@ mvn spring-boot:run
 
 1. **`infrastructure/config-server/src/main/resources/config/application.yml`** — Tüm servislerin paylaştığı ortak ayarlar (logging, actuator, resilience4j vb.)
 2. **`services/<svc>/src/main/resources/application.yml`** — Servise özel ayarlar (port, DB adı, Kafka group-id)
-3. **Environment variable override** — `DB_HOST`, `KAFKA_BOOTSTRAP`, `JWT_SECRET` vb.
+3. **Docker compose `environment:`** — Container içinde `DB_HOST`, `KAFKA_BOOTSTRAP`, `EUREKA_URL` vb. override edilir
+4. **Process env / `.env`** — Lokal `mvn spring-boot:run` çalıştırırken override için
 
 ---
 
@@ -159,6 +187,8 @@ mvn spring-boot:run
 | Servis → Servis (data fetch) | Senkron | OpenFeign + Resilience4j |
 | Servis → Servis (event) | Asenkron | Kafka + Outbox pattern |
 | CDR → Usage Service | Asenkron | Kafka |
+
+**Database-per-service** prensibi gereği bir mikroservis **başka bir servisin DB'sine doğrudan erişemez**. Veri ihtiyacı sadece API çağrısı veya event ile karşılanır.
 
 ---
 
@@ -172,6 +202,13 @@ Her domain değişikliğiyle aynı transaction içinde `*_OUTBOX_EVENT` tablosun
 
 ### Idempotent Consumer
 Kafka'dan tüketilen her event'in `eventId`'si `*_PROCESSED_EVENT.event_id` UNIQUE constraint ile kontrol edilir; aynı event tekrar gelirse atlanır.
+
+### `telco-common` Değişikliği
+`telco-common` modülünde değişiklik yaptıktan sonra:
+```bash
+mvn -pl telco-common -am clean install -DskipTests
+```
+sonrasında ilgili servisleri `docker compose up -d --build <service>` ile yeniden build et.
 
 ---
 
@@ -191,11 +228,10 @@ Kafka'dan tüketilen her event'in `eventId`'si `*_PROCESSED_EVENT.event_id` UNIQ
 - [ ] ER diagramına göre tüm tabloları içeren `V2__...sql` migration'larını yaz
 - [ ] REST controller + DTO + MapStruct mapper katmanları
 - [ ] OpenAPI dokümanı her servis için tamamla
-- [ ] Outbox publisher worker (TimerTask / @Scheduled)
+- [ ] Outbox publisher worker (`@Scheduled` + transactional outbox)
 - [ ] Kafka producer/consumer + JSON serializer config
 - [ ] JWT filter `api-gateway`'de (relay → `X-User-Id`, `X-User-Roles`)
 - [ ] Testcontainers ile integration test setup
-- [ ] Docker image'lar ve `docker-compose.full.yml`
 - [ ] CI/CD pipeline (GitHub Actions)
 
 ---

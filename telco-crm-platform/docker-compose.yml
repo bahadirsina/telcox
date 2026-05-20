@@ -1,22 +1,77 @@
-version: "3.9"
+name: telcox
 
 # =============================================================================
-# Telco CRM Platform - Lokal Gelistirme Altyapisi
+# Telco CRM Platform - Tum Sistem (Database-per-Service)
 #
-# NOT: PostgreSQL ve pgAdmin bu compose'a DAHIL DEGIL — kullanici kendi
-# Docker PostgreSQL container'ini kullaniyor (admin/admin).
-# Veritabani olusturma talimati: docker/postgres/init-databases.sql
+# Topoloji:
+#   - 10 ayri PostgreSQL container'i (her mikroservisin kendi veritabani)
+#   - 3 altyapi servisi (discovery-server, config-server, api-gateway)
+#   - 10 is mikroservisi (identity, customer, product-catalog, order,
+#     subscription, usage, billing, payment, notification, ticket)
+#   - Destekleyici servisler: Kafka, Redis, Zipkin, MailHog, pgAdmin, Kafka-UI
 #
-# Bu compose Kafka, Redis, Zipkin ve MailHog'u ayaga kaldirir.
+# Kullanim:
+#   1) mvn clean package -DskipTests           (parent dizinde, JAR'lari uretir)
+#   2) docker compose up -d                    (tum sistem ayaga kalkar)
+#
+# Bagimsiz PostgreSQL'ler host portlari:
+#   5432=identity, 5433=customer, 5434=product, 5435=order, 5436=subscription,
+#   5437=usage,    5438=billing,  5439=payment, 5440=notification, 5441=ticket
 # =============================================================================
+
+networks:
+  telcox-net:
+    driver: bridge
+
+volumes:
+  identity_pg_data:
+  customer_pg_data:
+  product_pg_data:
+  order_pg_data:
+  subscription_pg_data:
+  usage_pg_data:
+  billing_pg_data:
+  payment_pg_data:
+  notification_pg_data:
+  ticket_pg_data:
+  pgadmin_data:
+
+# -----------------------------------------------------------------------------
+# Tekrar eden alanlar icin YAML anchor'lari
+# -----------------------------------------------------------------------------
+x-postgres-common: &postgres-common
+  image: postgres:16-alpine
+  restart: unless-stopped
+  networks:
+    - telcox-net
+
+x-service-common: &service-common
+  restart: unless-stopped
+  networks:
+    - telcox-net
+  environment: &service-common-env
+    KAFKA_BOOTSTRAP: kafka:29092
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+    EUREKA_URL: http://discovery-server:8761/eureka/
+    CONFIG_SERVER_URL: http://config-server:8888
+    SPRING_ZIPKIN_BASE_URL: http://zipkin:9411
+    JAVA_OPTS: "-Xms256m -Xmx512m"
 
 services:
+
+  # ===========================================================================
+  # ALTYAPI (paylasilan)
+  # ===========================================================================
 
   redis:
     image: redis:7-alpine
     container_name: telcox-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
+    networks:
+      - telcox-net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -26,6 +81,7 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.7.1
     container_name: telcox-kafka
+    restart: unless-stopped
     ports:
       - "9092:9092"
       - "29092:29092"
@@ -43,32 +99,557 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       CLUSTER_ID: telcox-kafka-cluster-id-01
+    networks:
+      - telcox-net
     healthcheck:
       test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"]
       interval: 10s
       timeout: 10s
-      retries: 10
+      retries: 15
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: telcox-kafka-ui
+    restart: unless-stopped
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     ports:
       - "8090:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: telcox
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    networks:
+      - telcox-net
 
   zipkin:
     image: openzipkin/zipkin:latest
     container_name: telcox-zipkin
+    restart: unless-stopped
     ports:
       - "9411:9411"
+    networks:
+      - telcox-net
 
   mailhog:
     image: mailhog/mailhog:latest
     container_name: telcox-mailhog
+    restart: unless-stopped
     ports:
       - "1025:1025"
       - "8025:8025"
+    networks:
+      - telcox-net
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: telcox-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@telcox.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    networks:
+      - telcox-net
+
+  # ===========================================================================
+  # POSTGRESQL CONTAINER'LARI - HER SERVICE ICIN AYRI INSTANCE
+  # ===========================================================================
+
+  identity-postgres:
+    <<: *postgres-common
+    container_name: telcox-identity-postgres
+    environment:
+      POSTGRES_DB: identity_db
+      POSTGRES_USER: telcox
+      POSTGRES_PASSWORD: telcox
+    ports:
+      - "5432:5432"
+    volumes:
+      - identity_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telcox -d identity_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  customer-postgres:
+    <<: *postgres-common
+    container_name: telcox-customer-postgres
+    environment:
+      POSTGRES_DB: customer_db
+      POSTGRES_USER: telcox
+      POSTGRES_PASSWORD: telcox
+    ports:
+      - "5433:5432"
+    volumes:
+      - customer_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telcox -d customer_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  product-postgres:
+    <<: *postgres-common
+    container_name: telcox-product-postgres
+    environment:
+      POSTGRES_DB: product_db
+      POSTGRES_USER: telcox
+      POSTGRES_PASSWORD: telcox
+    ports:
+      - "5434:5432"
+    volumes:
+      - product_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telcox -d product_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  order-postgres:
+    <<: *postgres-common
+    container_name: telcox-order-postgres
+    environment:
+      POSTGRES_DB: order_db
+      POSTGRES_USER: telcox
+      POSTGRES_PASSWORD: telcox
+    ports:
+      - "5435:5432"
+    volumes:
+      - order_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telcox -d order_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  subscription-postgres:
+    <<: *postgres-common
+    container_name: telcox-subscription-postgres
+    environment:
+      POSTGRES_DB: subscription_db
+      POSTGRES_USER: telcox
+      POSTGRES_PASSWORD: telcox
+    ports:
+      - "5436:5432"
+    volumes:
+      - subscription_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telcox -d subscription_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  usage-postgres:
+    <<: *postgres-common
+    container_name: telcox-usage-postgres
+    environment:
+      POSTGRES_DB: usage_db
+      POSTGRES_USER: telcox
+      POSTGRES_PASSWORD: telcox
+    ports:
+      - "5437:5432"
+    volumes:
+      - usage_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telcox -d usage_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  billing-postgres:
+    <<: *postgres-common
+    container_name: telcox-billing-postgres
+    environment:
+      POSTGRES_DB: billing_db
+      POSTGRES_USER: telcox
+      POSTGRES_PASSWORD: telcox
+    ports:
+      - "5438:5432"
+    volumes:
+      - billing_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telcox -d billing_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  payment-postgres:
+    <<: *postgres-common
+    container_name: telcox-payment-postgres
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: telcox
+      POSTGRES_PASSWORD: telcox
+    ports:
+      - "5439:5432"
+    volumes:
+      - payment_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telcox -d payment_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  notification-postgres:
+    <<: *postgres-common
+    container_name: telcox-notification-postgres
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: telcox
+      POSTGRES_PASSWORD: telcox
+    ports:
+      - "5440:5432"
+    volumes:
+      - notification_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telcox -d notification_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  ticket-postgres:
+    <<: *postgres-common
+    container_name: telcox-ticket-postgres
+    environment:
+      POSTGRES_DB: ticket_db
+      POSTGRES_USER: telcox
+      POSTGRES_PASSWORD: telcox
+    ports:
+      - "5441:5432"
+    volumes:
+      - ticket_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U telcox -d ticket_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  # ===========================================================================
+  # ALTYAPI MIKROSERVISLERI (Spring Cloud)
+  # ===========================================================================
+
+  discovery-server:
+    build:
+      context: ./infrastructure/discovery-server
+    image: telcox/discovery-server:1.0.0-SNAPSHOT
+    container_name: telcox-discovery-server
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+    environment:
+      JAVA_OPTS: "-Xms256m -Xmx384m"
+    networks:
+      - telcox-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  config-server:
+    build:
+      context: ./infrastructure/config-server
+    image: telcox/config-server:1.0.0-SNAPSHOT
+    container_name: telcox-config-server
+    restart: unless-stopped
+    depends_on:
+      discovery-server:
+        condition: service_started
+    ports:
+      - "8888:8888"
+    environment:
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      JAVA_OPTS: "-Xms256m -Xmx384m"
+    networks:
+      - telcox-net
+
+  api-gateway:
+    build:
+      context: ./infrastructure/api-gateway
+    image: telcox/api-gateway:1.0.0-SNAPSHOT
+    container_name: telcox-api-gateway
+    restart: unless-stopped
+    depends_on:
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      EUREKA_URL: http://discovery-server:8761/eureka/
+      CONFIG_SERVER_URL: http://config-server:8888
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JAVA_OPTS: "-Xms256m -Xmx384m"
+    networks:
+      - telcox-net
+
+  # ===========================================================================
+  # IS MIKROSERVISLERI
+  # ===========================================================================
+
+  identity-service:
+    <<: *service-common
+    build:
+      context: ./services/identity-service
+    image: telcox/identity-service:1.0.0-SNAPSHOT
+    container_name: telcox-identity-service
+    depends_on:
+      identity-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    ports:
+      - "9001:9001"
+    environment:
+      <<: *service-common-env
+      DB_HOST: identity-postgres
+      DB_PORT: 5432
+      DB_NAME: identity_db
+      DB_USER: telcox
+      DB_PASSWORD: telcox
+      JWT_SECRET: telcox-local-dev-secret-key-please-change-in-production
+
+  customer-service:
+    <<: *service-common
+    build:
+      context: ./services/customer-service
+    image: telcox/customer-service:1.0.0-SNAPSHOT
+    container_name: telcox-customer-service
+    depends_on:
+      customer-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    ports:
+      - "9002:9002"
+    environment:
+      <<: *service-common-env
+      DB_HOST: customer-postgres
+      DB_PORT: 5432
+      DB_NAME: customer_db
+      DB_USER: telcox
+      DB_PASSWORD: telcox
+
+  product-catalog-service:
+    <<: *service-common
+    build:
+      context: ./services/product-catalog-service
+    image: telcox/product-catalog-service:1.0.0-SNAPSHOT
+    container_name: telcox-product-catalog-service
+    depends_on:
+      product-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    ports:
+      - "9003:9003"
+    environment:
+      <<: *service-common-env
+      DB_HOST: product-postgres
+      DB_PORT: 5432
+      DB_NAME: product_db
+      DB_USER: telcox
+      DB_PASSWORD: telcox
+
+  order-service:
+    <<: *service-common
+    build:
+      context: ./services/order-service
+    image: telcox/order-service:1.0.0-SNAPSHOT
+    container_name: telcox-order-service
+    depends_on:
+      order-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    ports:
+      - "9004:9004"
+    environment:
+      <<: *service-common-env
+      DB_HOST: order-postgres
+      DB_PORT: 5432
+      DB_NAME: order_db
+      DB_USER: telcox
+      DB_PASSWORD: telcox
+
+  subscription-service:
+    <<: *service-common
+    build:
+      context: ./services/subscription-service
+    image: telcox/subscription-service:1.0.0-SNAPSHOT
+    container_name: telcox-subscription-service
+    depends_on:
+      subscription-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    ports:
+      - "9005:9005"
+    environment:
+      <<: *service-common-env
+      DB_HOST: subscription-postgres
+      DB_PORT: 5432
+      DB_NAME: subscription_db
+      DB_USER: telcox
+      DB_PASSWORD: telcox
+
+  usage-service:
+    <<: *service-common
+    build:
+      context: ./services/usage-service
+    image: telcox/usage-service:1.0.0-SNAPSHOT
+    container_name: telcox-usage-service
+    depends_on:
+      usage-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    ports:
+      - "9006:9006"
+    environment:
+      <<: *service-common-env
+      DB_HOST: usage-postgres
+      DB_PORT: 5432
+      DB_NAME: usage_db
+      DB_USER: telcox
+      DB_PASSWORD: telcox
+
+  billing-service:
+    <<: *service-common
+    build:
+      context: ./services/billing-service
+    image: telcox/billing-service:1.0.0-SNAPSHOT
+    container_name: telcox-billing-service
+    depends_on:
+      billing-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    ports:
+      - "9007:9007"
+    environment:
+      <<: *service-common-env
+      DB_HOST: billing-postgres
+      DB_PORT: 5432
+      DB_NAME: billing_db
+      DB_USER: telcox
+      DB_PASSWORD: telcox
+
+  payment-service:
+    <<: *service-common
+    build:
+      context: ./services/payment-service
+    image: telcox/payment-service:1.0.0-SNAPSHOT
+    container_name: telcox-payment-service
+    depends_on:
+      payment-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    ports:
+      - "9008:9008"
+    environment:
+      <<: *service-common-env
+      DB_HOST: payment-postgres
+      DB_PORT: 5432
+      DB_NAME: payment_db
+      DB_USER: telcox
+      DB_PASSWORD: telcox
+
+  notification-service:
+    <<: *service-common
+    build:
+      context: ./services/notification-service
+    image: telcox/notification-service:1.0.0-SNAPSHOT
+    container_name: telcox-notification-service
+    depends_on:
+      notification-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    ports:
+      - "9009:9009"
+    environment:
+      <<: *service-common-env
+      DB_HOST: notification-postgres
+      DB_PORT: 5432
+      DB_NAME: notification_db
+      DB_USER: telcox
+      DB_PASSWORD: telcox
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+
+  ticket-service:
+    <<: *service-common
+    build:
+      context: ./services/ticket-service
+    image: telcox/ticket-service:1.0.0-SNAPSHOT
+    container_name: telcox-ticket-service
+    depends_on:
+      ticket-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      config-server:
+        condition: service_started
+    ports:
+      - "9010:9010"
+    environment:
+      <<: *service-common-env
+      DB_HOST: ticket-postgres
+      DB_PORT: 5432
+      DB_NAME: ticket_db
+      DB_USER: telcox
+      DB_PASSWORD: telcox

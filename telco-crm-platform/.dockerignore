@@ -1,0 +1,14 @@
+**/.git
+**/.idea
+**/.vscode
+**/.DS_Store
+**/node_modules
+**/.gradle
+**/build
+**/.mvn
+**/mvnw
+**/mvnw.cmd
+**/Dockerfile
+**/docker-compose*.yml
+**/*.md
+**/.gitignore
