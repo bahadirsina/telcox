@@ -14,9 +14,19 @@ name: telcox
 #   1) mvn clean package -DskipTests           (parent dizinde, JAR'lari uretir)
 #   2) docker compose up -d                    (tum sistem ayaga kalkar)
 #
+# Host port araligi (1xxxx ile shift): baska projeler/yerel kurulumlarla
+# cakismamasi icin tum host portlari yuksek araliga alindi. Container icinde
+# servisler hala standart portlari kullanir (5432, 9001-9010, vb.).
+#
 # Bagimsiz PostgreSQL'ler host portlari:
-#   5432=identity, 5433=customer, 5434=product, 5435=order, 5436=subscription,
-#   5437=usage,    5438=billing,  5439=payment, 5440=notification, 5441=ticket
+#   15432=identity, 15433=customer, 15434=product, 15435=order, 15436=subscription,
+#   15437=usage,    15438=billing,  15439=payment, 15440=notification, 15441=ticket
+#
+# Diger host portlari:
+#   16379=redis, 19092=kafka, 18090=kafka-ui, 19411=zipkin,
+#   11025=mailhog-smtp, 18025=mailhog-web, 15050=pgadmin,
+#   18761=eureka, 18888=config-server, 18080=api-gateway,
+#   19001..19010 = is mikroservisleri
 # =============================================================================
 
 networks:
@@ -69,7 +79,7 @@ services:
     container_name: telcox-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "16379:6379"
     networks:
       - telcox-net
     healthcheck:
@@ -83,13 +93,12 @@ services:
     container_name: telcox-kafka
     restart: unless-stopped
     ports:
-      - "9092:9092"
-      - "29092:29092"
+      - "19092:9092"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:19092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
@@ -115,7 +124,7 @@ services:
       kafka:
         condition: service_healthy
     ports:
-      - "8090:8080"
+      - "18090:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: telcox
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
@@ -127,7 +136,7 @@ services:
     container_name: telcox-zipkin
     restart: unless-stopped
     ports:
-      - "9411:9411"
+      - "19411:9411"
     networks:
       - telcox-net
 
@@ -136,8 +145,8 @@ services:
     container_name: telcox-mailhog
     restart: unless-stopped
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "11025:1025"
+      - "18025:8025"
     networks:
       - telcox-net
 
@@ -146,12 +155,12 @@ services:
     container_name: telcox-pgadmin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@telcox.local
+      PGADMIN_DEFAULT_EMAIL: admin@telcox.com
       PGADMIN_DEFAULT_PASSWORD: admin
       PGADMIN_CONFIG_SERVER_MODE: "False"
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
     ports:
-      - "5050:80"
+      - "15050:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
       - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
@@ -170,7 +179,7 @@ services:
       POSTGRES_USER: telcox
       POSTGRES_PASSWORD: telcox
     ports:
-      - "5432:5432"
+      - "15432:5432"
     volumes:
       - identity_pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -187,7 +196,7 @@ services:
       POSTGRES_USER: telcox
       POSTGRES_PASSWORD: telcox
     ports:
-      - "5433:5432"
+      - "15433:5432"
     volumes:
       - customer_pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -204,7 +213,7 @@ services:
       POSTGRES_USER: telcox
       POSTGRES_PASSWORD: telcox
     ports:
-      - "5434:5432"
+      - "15434:5432"
     volumes:
       - product_pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -221,7 +230,7 @@ services:
       POSTGRES_USER: telcox
       POSTGRES_PASSWORD: telcox
     ports:
-      - "5435:5432"
+      - "15435:5432"
     volumes:
       - order_pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -238,7 +247,7 @@ services:
       POSTGRES_USER: telcox
       POSTGRES_PASSWORD: telcox
     ports:
-      - "5436:5432"
+      - "15436:5432"
     volumes:
       - subscription_pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -255,7 +264,7 @@ services:
       POSTGRES_USER: telcox
       POSTGRES_PASSWORD: telcox
     ports:
-      - "5437:5432"
+      - "15437:5432"
     volumes:
       - usage_pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -272,7 +281,7 @@ services:
       POSTGRES_USER: telcox
       POSTGRES_PASSWORD: telcox
     ports:
-      - "5438:5432"
+      - "15438:5432"
     volumes:
       - billing_pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -289,7 +298,7 @@ services:
       POSTGRES_USER: telcox
       POSTGRES_PASSWORD: telcox
     ports:
-      - "5439:5432"
+      - "15439:5432"
     volumes:
       - payment_pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -306,7 +315,7 @@ services:
       POSTGRES_USER: telcox
       POSTGRES_PASSWORD: telcox
     ports:
-      - "5440:5432"
+      - "15440:5432"
     volumes:
       - notification_pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -323,7 +332,7 @@ services:
       POSTGRES_USER: telcox
       POSTGRES_PASSWORD: telcox
     ports:
-      - "5441:5432"
+      - "15441:5432"
     volumes:
       - ticket_pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -343,7 +352,7 @@ services:
     container_name: telcox-discovery-server
     restart: unless-stopped
     ports:
-      - "8761:8761"
+      - "18761:8761"
     environment:
       JAVA_OPTS: "-Xms256m -Xmx384m"
     networks:
@@ -359,7 +368,7 @@ services:
       discovery-server:
         condition: service_started
     ports:
-      - "8888:8888"
+      - "18888:8888"
     environment:
       EUREKA_URL: http://discovery-server:8761/eureka/
       JAVA_OPTS: "-Xms256m -Xmx384m"
@@ -380,7 +389,7 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "18080:8080"
     environment:
       EUREKA_URL: http://discovery-server:8761/eureka/
       CONFIG_SERVER_URL: http://config-server:8888
@@ -410,7 +419,7 @@ services:
       config-server:
         condition: service_started
     ports:
-      - "9001:9001"
+      - "19001:9001"
     environment:
       <<: *service-common-env
       DB_HOST: identity-postgres
@@ -436,7 +445,7 @@ services:
       config-server:
         condition: service_started
     ports:
-      - "9002:9002"
+      - "19002:9002"
     environment:
       <<: *service-common-env
       DB_HOST: customer-postgres
@@ -461,7 +470,7 @@ services:
       config-server:
         condition: service_started
     ports:
-      - "9003:9003"
+      - "19003:9003"
     environment:
       <<: *service-common-env
       DB_HOST: product-postgres
@@ -486,7 +495,7 @@ services:
       config-server:
         condition: service_started
     ports:
-      - "9004:9004"
+      - "19004:9004"
     environment:
       <<: *service-common-env
       DB_HOST: order-postgres
@@ -511,7 +520,7 @@ services:
       config-server:
         condition: service_started
     ports:
-      - "9005:9005"
+      - "19005:9005"
     environment:
       <<: *service-common-env
       DB_HOST: subscription-postgres
@@ -536,7 +545,7 @@ services:
       config-server:
         condition: service_started
     ports:
-      - "9006:9006"
+      - "19006:9006"
     environment:
       <<: *service-common-env
       DB_HOST: usage-postgres
@@ -561,7 +570,7 @@ services:
       config-server:
         condition: service_started
     ports:
-      - "9007:9007"
+      - "19007:9007"
     environment:
       <<: *service-common-env
       DB_HOST: billing-postgres
@@ -586,7 +595,7 @@ services:
       config-server:
         condition: service_started
     ports:
-      - "9008:9008"
+      - "19008:9008"
     environment:
       <<: *service-common-env
       DB_HOST: payment-postgres
@@ -613,7 +622,7 @@ services:
       config-server:
         condition: service_started
     ports:
-      - "9009:9009"
+      - "19009:9009"
     environment:
       <<: *service-common-env
       DB_HOST: notification-postgres
@@ -640,7 +649,7 @@ services:
       config-server:
         condition: service_started
     ports:
-      - "9010:9010"
+      - "19010:9010"
     environment:
       <<: *service-common-env
       DB_HOST: ticket-postgres

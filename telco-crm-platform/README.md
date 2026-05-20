@@ -13,21 +13,35 @@ ER diyagramları: [`docs/microservice-er-diagrams/`](../docs/microservice-er-dia
 ### Database-per-Service Pattern
 Her mikroservis **kendi PostgreSQL container'ına** sahiptir. Servisler arası referanslar `FOREIGN KEY` ile değil, **UUID/business key** ile tutulur. Tutarlılık `Outbox + Inbox (Processed Event)` pattern ile event-driven sağlanır.
 
-| Servis | App Port | PostgreSQL Container | Host Port | Database |
-|---|---|---|---|---|
-| `api-gateway` | 8080 | — | — | — |
-| `discovery-server` (Eureka) | 8761 | — | — | — |
-| `config-server` | 8888 | — | — | — |
-| `identity-service` | 9001 | `identity-postgres` | 5432 | `identity_db` |
-| `customer-service` | 9002 | `customer-postgres` | 5433 | `customer_db` |
-| `product-catalog-service` | 9003 | `product-postgres` | 5434 | `product_db` |
-| `order-service` | 9004 | `order-postgres` | 5435 | `order_db` |
-| `subscription-service` | 9005 | `subscription-postgres` | 5436 | `subscription_db` |
-| `usage-service` | 9006 | `usage-postgres` | 5437 | `usage_db` |
-| `billing-service` | 9007 | `billing-postgres` | 5438 | `billing_db` |
-| `payment-service` | 9008 | `payment-postgres` | 5439 | `payment_db` |
-| `notification-service` | 9009 | `notification-postgres` | 5440 | `notification_db` |
-| `ticket-service` | 9010 | `ticket-postgres` | 5441 | `ticket_db` |
+> **Port stratejisi:** Tüm host portları **1xxxx** aralığına shift edildi (örn. PostgreSQL `5432` → host `15432`) ki yerel makinede çalışan başka projelerle (örn. ayrı bir PostgreSQL, başka bir Spring app) çakışmasın. Container içindeki portlar **standart kalır**; servisler birbirini hâlâ `9001`, `5432`, `8761`, vb. üzerinden bulur.
+
+| Servis | Container Port | PostgreSQL Container | Host Port (PG) | Host Port (App) | Database |
+|---|---|---|---|---|---|
+| `api-gateway` | 8080 | — | — | **18080** | — |
+| `discovery-server` (Eureka) | 8761 | — | — | **18761** | — |
+| `config-server` | 8888 | — | — | **18888** | — |
+| `identity-service` | 9001 | `identity-postgres` | **15432** | **19001** | `identity_db` |
+| `customer-service` | 9002 | `customer-postgres` | **15433** | **19002** | `customer_db` |
+| `product-catalog-service` | 9003 | `product-postgres` | **15434** | **19003** | `product_db` |
+| `order-service` | 9004 | `order-postgres` | **15435** | **19004** | `order_db` |
+| `subscription-service` | 9005 | `subscription-postgres` | **15436** | **19005** | `subscription_db` |
+| `usage-service` | 9006 | `usage-postgres` | **15437** | **19006** | `usage_db` |
+| `billing-service` | 9007 | `billing-postgres` | **15438** | **19007** | `billing_db` |
+| `payment-service` | 9008 | `payment-postgres` | **15439** | **19008** | `payment_db` |
+| `notification-service` | 9009 | `notification-postgres` | **15440** | **19009** | `notification_db` |
+| `ticket-service` | 9010 | `ticket-postgres` | **15441** | **19010** | `ticket_db` |
+
+### Destek servislerinin host portları
+
+| Servis | Host Port | Container Port |
+|---|---|---|
+| Redis | **16379** | 6379 |
+| Kafka (broker) | **19092** | 9092 |
+| Kafka UI | **18090** | 8080 |
+| Zipkin | **19411** | 9411 |
+| MailHog SMTP | **11025** | 1025 |
+| MailHog Web | **18025** | 8025 |
+| pgAdmin | **15050** | 80 |
 
 > **Önemli:** Her mikroservis kendine ait **bağımsız bir PostgreSQL Docker container'ı** üzerinde çalışır. Container'lar tek bir Docker network (`telcox-net`) üzerinde haberleşir; servisler birbirinin DB'sine doğrudan erişemez, yalnızca **REST/Feign** veya **Kafka event'leri** ile haberleşir.
 
@@ -84,7 +98,7 @@ telco-crm-platform/                  (parent POM — BOM ve modül listesi)
 - JDK 21
 - Maven 3.9+
 - Docker Desktop (veya Docker Engine + Compose v2)
-- Host portları **5432-5441**, **6379**, **8080**, **8025**, **8090**, **8761**, **8888**, **9001-9010**, **9092**, **9411**, **5050** boş olmalı
+- Host portları **15432-15441** (PG), **16379** (Redis), **19092** (Kafka), **18090** (Kafka UI), **19411** (Zipkin), **11025/18025** (MailHog), **15050** (pgAdmin), **18761** (Eureka), **18888** (Config), **18080** (Gateway), **19001-19010** (servisler) boş olmalı
 
 ### 1. JAR'ları Üret
 
@@ -124,13 +138,13 @@ docker compose logs --tail=50 -f            # tum sistem (uzun olur)
 
 | Endpoint | Adres |
 |---|---|
-| Eureka dashboard | http://localhost:8761 |
-| API Gateway routes | http://localhost:8080/actuator/gateway/routes |
-| Identity Swagger | http://localhost:9001/swagger-ui.html |
-| Kafka UI | http://localhost:8090 |
-| Zipkin | http://localhost:9411 |
-| MailHog (SMTP UI) | http://localhost:8025 |
-| pgAdmin | http://localhost:5050 (admin@telcox.local / admin) |
+| Eureka dashboard | http://localhost:18761 |
+| API Gateway routes | http://localhost:18080/actuator/gateway/routes |
+| Identity Swagger | http://localhost:19001/swagger-ui.html |
+| Kafka UI | http://localhost:18090 |
+| Zipkin | http://localhost:19411 |
+| MailHog (SMTP UI) | http://localhost:18025 |
+| pgAdmin | http://localhost:15050 (admin@telcox.com / admin) |
 
 pgAdmin açılınca **10 PostgreSQL sunucusu** "Telcox CRM" grubunda otomatik tanımlı gelir; her birinin şifresi `telcox`.
 
@@ -164,7 +178,7 @@ mvn -pl infrastructure/api-gateway      spring-boot:run     # Terminal 3
 mvn -pl services/identity-service spring-boot:run           # Terminal 4
 ```
 
-`application.yml` default değerleri her servisin doğru host port'una bağlanır (`identity` → `localhost:5432`, `customer` → `localhost:5433`, vb.).
+`application.yml` default değerleri her servisin doğru host port'una bağlanır (`identity` → `localhost:15432`, `customer` → `localhost:15433`, vb.).
 
 > `.env.example` dosyasını `.env` olarak kopyalayıp override edebilirsin.
 
