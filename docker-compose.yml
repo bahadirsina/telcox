@@ -111,7 +111,7 @@ services:
     networks:
       - telcox-net
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list || exit 1"]
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:29092 --list || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 15
@@ -143,6 +143,7 @@ services:
   mailhog:
     image: mailhog/mailhog:latest
     container_name: telcox-mailhog
+    platform: linux/amd64
     restart: unless-stopped
     ports:
       - "11025:1025"
