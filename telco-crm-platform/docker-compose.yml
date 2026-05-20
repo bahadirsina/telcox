@@ -348,11 +348,6 @@ services:
       JAVA_OPTS: "-Xms256m -Xmx384m"
     networks:
       - telcox-net
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 15
 
   config-server:
     build:
