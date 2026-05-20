@@ -55,6 +55,14 @@ x-postgres-common: &postgres-common
   networks:
     - telcox-net
 
+# Spring Boot servisleri icin ortak healthcheck parametreleri
+# Test komutu her serviste port'a gore override edilir.
+x-healthcheck-spring: &healthcheck-spring
+  interval: 15s
+  timeout: 5s
+  retries: 5
+  start_period: 90s
+
 x-service-common: &service-common
   restart: unless-stopped
   networks:
@@ -150,6 +158,12 @@ services:
       - "18025:8025"
     networks:
       - telcox-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8025/api/v2/messages >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -358,6 +372,9 @@ services:
       JAVA_OPTS: "-Xms256m -Xmx384m"
     networks:
       - telcox-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8761/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      <<: *healthcheck-spring
 
   config-server:
     build:
@@ -367,7 +384,7 @@ services:
     restart: unless-stopped
     depends_on:
       discovery-server:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "18888:8888"
     environment:
@@ -375,6 +392,9 @@ services:
       JAVA_OPTS: "-Xms256m -Xmx384m"
     networks:
       - telcox-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8888/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      <<: *healthcheck-spring
 
   api-gateway:
     build:
@@ -384,9 +404,9 @@ services:
     restart: unless-stopped
     depends_on:
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_healthy
     ports:
@@ -399,6 +419,9 @@ services:
       JAVA_OPTS: "-Xms256m -Xmx384m"
     networks:
       - telcox-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      <<: *healthcheck-spring
 
   # ===========================================================================
   # IS MIKROSERVISLERI
@@ -416,9 +439,9 @@ services:
       kafka:
         condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "19001:9001"
     environment:
@@ -429,6 +452,9 @@ services:
       DB_USER: telcox
       DB_PASSWORD: telcox
       JWT_SECRET: telcox-local-dev-secret-key-please-change-in-production
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9001/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      <<: *healthcheck-spring
 
   customer-service:
     <<: *service-common
@@ -442,9 +468,9 @@ services:
       kafka:
         condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "19002:9002"
     environment:
@@ -454,6 +480,9 @@ services:
       DB_NAME: customer_db
       DB_USER: telcox
       DB_PASSWORD: telcox
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9002/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      <<: *healthcheck-spring
 
   product-catalog-service:
     <<: *service-common
@@ -467,9 +496,9 @@ services:
       kafka:
         condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "19003:9003"
     environment:
@@ -479,6 +508,9 @@ services:
       DB_NAME: product_db
       DB_USER: telcox
       DB_PASSWORD: telcox
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9003/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      <<: *healthcheck-spring
 
   order-service:
     <<: *service-common
@@ -492,9 +524,9 @@ services:
       kafka:
         condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "19004:9004"
     environment:
@@ -504,6 +536,9 @@ services:
       DB_NAME: order_db
       DB_USER: telcox
       DB_PASSWORD: telcox
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9004/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      <<: *healthcheck-spring
 
   subscription-service:
     <<: *service-common
@@ -517,9 +552,9 @@ services:
       kafka:
         condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "19005:9005"
     environment:
@@ -529,6 +564,9 @@ services:
       DB_NAME: subscription_db
       DB_USER: telcox
       DB_PASSWORD: telcox
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9005/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      <<: *healthcheck-spring
 
   usage-service:
     <<: *service-common
@@ -542,9 +580,9 @@ services:
       kafka:
         condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "19006:9006"
     environment:
@@ -554,6 +592,9 @@ services:
       DB_NAME: usage_db
       DB_USER: telcox
       DB_PASSWORD: telcox
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9006/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      <<: *healthcheck-spring
 
   billing-service:
     <<: *service-common
@@ -567,9 +608,9 @@ services:
       kafka:
         condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "19007:9007"
     environment:
@@ -579,6 +620,9 @@ services:
       DB_NAME: billing_db
       DB_USER: telcox
       DB_PASSWORD: telcox
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9007/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      <<: *healthcheck-spring
 
   payment-service:
     <<: *service-common
@@ -592,9 +636,9 @@ services:
       kafka:
         condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "19008:9008"
     environment:
@@ -604,6 +648,9 @@ services:
       DB_NAME: payment_db
       DB_USER: telcox
       DB_PASSWORD: telcox
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9008/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      <<: *healthcheck-spring
 
   notification-service:
     <<: *service-common
@@ -617,11 +664,11 @@ services:
       kafka:
         condition: service_healthy
       mailhog:
-        condition: service_started
+        condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "19009:9009"
     environment:
@@ -633,6 +680,9 @@ services:
       DB_PASSWORD: telcox
       SMTP_HOST: mailhog
       SMTP_PORT: 1025
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9009/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      <<: *healthcheck-spring
 
   ticket-service:
     <<: *service-common
@@ -646,9 +696,9 @@ services:
       kafka:
         condition: service_healthy
       discovery-server:
-        condition: service_started
+        condition: service_healthy
       config-server:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "19010:9010"
     environment:
@@ -658,3 +708,6 @@ services:
       DB_NAME: ticket_db
       DB_USER: telcox
       DB_PASSWORD: telcox
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9010/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      <<: *healthcheck-spring
