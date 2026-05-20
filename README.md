@@ -1,6 +1,6 @@
 # Telco CRM Platform
 
-Telekomünikasyon CRM platformu — Spring Boot 3 + Java 21 ile geliştirilen, **microservices** mimarisi, **database-per-service** ve **multi-module Maven** paternlerini uygulayan eğitim projesi.
+Telekomünikasyon CRM platformu — Spring Boot 4 + Java 21 ile geliştirilen, **microservices** mimarisi, **database-per-service** ve **multi-module Maven** paternlerini uygulayan eğitim projesi.
 
 Detaylı analiz: [`/Users/tamerakdeniz/Personal/telcox/docs/telco-crm-microservices-mvp 2026-05-15 pmt 18.41.50.docx`](../docs/)
 
@@ -74,8 +74,8 @@ telco-crm-platform/                  (parent POM — BOM ve modül listesi)
 | Katman | Teknoloji | Versiyon |
 |---|---|---|
 | Dil | Java | 21 (LTS) |
-| Framework | Spring Boot | 3.3.5 |
-| Spring Cloud | Gateway, Config, Eureka, OpenFeign | 2023.0.3 |
+| Framework | Spring Boot | 4.0.6 |
+| Spring Cloud | Gateway, Config, Eureka, OpenFeign | 2025.1.1 (Oakwood) |
 | Build | Maven Multi-Module | 3.9+ |
 | Database | PostgreSQL | 16 (her servise ayrı container) |
 | Cache / Idempotency | Redis | 7 |
@@ -84,8 +84,8 @@ telco-crm-platform/                  (parent POM — BOM ve modül listesi)
 | ORM | Spring Data JPA + Hibernate | (BOM) |
 | Mapping | MapStruct | 1.6.3 |
 | Auth | Spring Security + JWT (jjwt) | 0.12.6 |
-| Docs | Springdoc OpenAPI | 2.6.0 |
-| Resilience | Resilience4j | 2.2.0 |
+| Docs | Springdoc OpenAPI | 3.0.3 |
+| Resilience | Resilience4j | 2.4.0 |
 | Observability | Micrometer + Zipkin + OpenTelemetry | (BOM) |
 | Test | JUnit 5, Mockito, Testcontainers | 1.20.4 |
 | Container | Docker + Docker Compose v2 | — |
