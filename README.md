@@ -1,6 +1,6 @@
 # Telco CRM Platform
 
-Telekomünikasyon CRM platformu — Spring Boot 3.5.x + Java 21 ile geliştirilen, **microservices** mimarisi, **database-per-service** ve **multi-module Maven** paternlerini uygulayan eğitim projesi.
+Telekomünikasyon CRM platformu — Spring Boot 4 + Java 21 ile geliştirilen, **microservices** mimarisi, **database-per-service** ve **multi-module Maven** paternlerini uygulayan eğitim projesi.
 
 Detaylı analiz: [`/Users/tamerakdeniz/Personal/telcox/docs/telco-crm-microservices-mvp 2026-05-15 pmt 18.41.50.docx`](../docs/)
 
@@ -77,8 +77,8 @@ telco-crm-platform/                  (parent POM — BOM ve modül listesi)
 | Katman | Teknoloji | Versiyon |
 |---|---|---|
 | Dil | Java | 21 (LTS) |
-| Framework | Spring Boot | 3.5.0 |
-| Spring Cloud | Gateway, Config, Eureka | 2025.0.0 |
+| Framework | Spring Boot | 4.0.6 |
+| Spring Cloud | Gateway, Config, Eureka | 2025.1.1 |
 | Build | Maven Multi-Module | 3.9+ |
 | Database | PostgreSQL | 16 (her servise ayrı container) |
 | Cache / Idempotency | Redis | 7 |
