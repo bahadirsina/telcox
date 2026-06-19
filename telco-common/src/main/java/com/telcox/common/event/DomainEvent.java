@@ -12,8 +12,13 @@ public interface DomainEvent {
     /** Event icin global unique id; consumer tarafindaki PROCESSED_EVENT.eventId. */
     UUID eventId();
 
-    /** Event'in turu (CustomerRegistered, OrderConfirmed vb.). */
-    String eventType();
+    /** Event tipi (customer-created, order-confirmed vb.). */
+    String type();
+
+    /** Geriye uyumluluk icin eski eventType accessor'i. */
+    default String eventType() {
+        return type();
+    }
 
     /** Olusturan servis adi (correlation icin). */
     String sourceService();
@@ -29,4 +34,7 @@ public interface DomainEvent {
 
     /** Distributed tracing icin gateway tarafindan enjekte edilen id. */
     String correlationId();
+
+    /** Event semasinin major versiyonu. */
+    int schemaVersion();
 }

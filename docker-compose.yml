@@ -8,7 +8,8 @@ name: telcox
 #   - 3 altyapi servisi (discovery-server, config-server, api-gateway)
 #   - 10 is mikroservisi (identity, customer, product-catalog, order,
 #     subscription, usage, billing, payment, notification, ticket)
-#   - Destekleyici servisler: Kafka, Redis, Zipkin, MailHog, pgAdmin, Kafka-UI
+#   - Destekleyici servisler: Kafka, Kafka Connect/Debezium, Redis, Keycloak,
+#     Zipkin, MailHog, pgAdmin, Kafka-UI
 #
 # Kullanim:
 #   1) mvn clean package -DskipTests           (parent dizinde, JAR'lari uretir)
@@ -23,7 +24,8 @@ name: telcox
 #   15437=usage,    15438=billing,  15439=payment, 15440=notification, 15441=ticket
 #
 # Diger host portlari:
-#   16379=redis, 19092=kafka, 18090=kafka-ui, 19411=zipkin,
+#   16379=redis, 19092=kafka, 18090=kafka-ui, 18084=kafka-connect,
+#   18083=keycloak, 15442=keycloak-postgres, 19411=zipkin,
 #   11025=mailhog-smtp, 18025=mailhog-web, 15050=pgadmin,
 #   18761=eureka, 18888=config-server, 18080=api-gateway,
 #   19001..19010 = is mikroservisleri
@@ -44,7 +46,9 @@ volumes:
   payment_pg_data:
   notification_pg_data:
   ticket_pg_data:
+  keycloak_pg_data:
   pgadmin_data:
+  kafka_connect_data:
 
 # -----------------------------------------------------------------------------
 # Tekrar eden alanlar icin YAML anchor'lari
@@ -52,6 +56,7 @@ volumes:
 x-postgres-common: &postgres-common
   image: postgres:16-alpine
   restart: unless-stopped
+  command: ["postgres", "-c", "wal_level=logical", "-c", "max_wal_senders=10", "-c", "max_replication_slots=10"]
   networks:
     - telcox-net
 
@@ -124,6 +129,19 @@ services:
       timeout: 10s
       retries: 15
 
+  kafka-init:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: telcox-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./docker/kafka/create-topics.sh:/usr/local/bin/create-topics.sh:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/create-topics.sh"]
+    networks:
+      - telcox-net
+    restart: "no"
+
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: telcox-kafka-ui
@@ -138,6 +156,44 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
     networks:
       - telcox-net
+
+  kafka-connect:
+    image: quay.io/debezium/connect:2.7.3.Final
+    container_name: telcox-kafka-connect
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "18084:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      GROUP_ID: telcox-connect-cluster
+      CONFIG_STORAGE_TOPIC: telcox.connect.configs
+      OFFSET_STORAGE_TOPIC: telcox.connect.offsets
+      STATUS_STORAGE_TOPIC: telcox.connect.statuses
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+      CONNECT_PLUGIN_PATH: /kafka/connect,/debezium/connectors
+    volumes:
+      - kafka_connect_data:/kafka/data
+      - ./docker/debezium/connectors:/opt/telcox/debezium/connectors:ro
+    networks:
+      - telcox-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8083/connectors >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   zipkin:
     image: openzipkin/zipkin:latest
@@ -181,6 +237,59 @@ services:
       - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
     networks:
       - telcox-net
+
+  keycloak-postgres:
+    image: postgres:16-alpine
+    container_name: telcox-keycloak-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: ${KC_DB_USER:-keycloak}
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
+    ports:
+      - "15442:5432"
+    volumes:
+      - keycloak_pg_data:/var/lib/postgresql/data
+    networks:
+      - telcox-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KC_DB_USER:-keycloak} -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: telcox-keycloak
+    restart: unless-stopped
+    command:
+      - start-dev
+      - --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/keycloak
+      KC_DB_USERNAME: ${KC_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "18083:8080"
+    volumes:
+      - ./infrastructure/keycloak/realm-export:/opt/keycloak/data/import:ro
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+    networks:
+      - telcox-net
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nhost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
 
   # ===========================================================================
   # POSTGRESQL CONTAINER'LARI - HER SERVICE ICIN AYRI INSTANCE

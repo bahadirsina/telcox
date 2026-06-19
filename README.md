@@ -1,6 +1,6 @@
 # Telco CRM Platform
 
-Telekomünikasyon CRM platformu — Spring Boot 4 + Java 21 ile geliştirilen, **microservices** mimarisi, **database-per-service** ve **multi-module Maven** paternlerini uygulayan eğitim projesi.
+Telekomünikasyon CRM platformu — Spring Boot 3.5.x + Java 21 ile geliştirilen, **microservices** mimarisi, **database-per-service** ve **multi-module Maven** paternlerini uygulayan eğitim projesi.
 
 Detaylı analiz: [`/Users/tamerakdeniz/Personal/telcox/docs/telco-crm-microservices-mvp 2026-05-15 pmt 18.41.50.docx`](../docs/)
 
@@ -38,12 +38,15 @@ Her mikroservis **kendi PostgreSQL container'ına** sahiptir. Servisler arası r
 | Redis | **16379** | 6379 |
 | Kafka (broker) | **19092** | 9092 |
 | Kafka UI | **18090** | 8080 |
+| Kafka Connect / Debezium | **18084** | 8083 |
+| Keycloak | **18083** | 8080 |
+| Keycloak PostgreSQL | **15442** | 5432 |
 | Zipkin | **19411** | 9411 |
 | MailHog SMTP | **11025** | 1025 |
 | MailHog Web | **18025** | 8025 |
 | pgAdmin | **15050** | 80 |
 
-> **Önemli:** Her mikroservis kendine ait **bağımsız bir PostgreSQL Docker container'ı** üzerinde çalışır. Container'lar tek bir Docker network (`telcox-net`) üzerinde haberleşir; servisler birbirinin DB'sine doğrudan erişemez, yalnızca **REST/Feign** veya **Kafka event'leri** ile haberleşir.
+> **Önemli:** Her mikroservis kendine ait **bağımsız bir PostgreSQL Docker container'ı** üzerinde çalışır. Container'lar tek bir Docker network (`telcox-net`) üzerinde haberleşir; servisler birbirinin DB'sine doğrudan erişemez, core akışlarda **Kafka event'leri** ve ihtiyaç halinde açıkça belgelenmiş query API'leri ile haberleşir.
 
 ### Multi-Module Maven Yapısı
 ```
@@ -74,8 +77,8 @@ telco-crm-platform/                  (parent POM — BOM ve modül listesi)
 | Katman | Teknoloji | Versiyon |
 |---|---|---|
 | Dil | Java | 21 (LTS) |
-| Framework | Spring Boot | 4.0.6 |
-| Spring Cloud | Gateway, Config, Eureka, OpenFeign | 2025.1.1 (Oakwood) |
+| Framework | Spring Boot | 3.5.0 |
+| Spring Cloud | Gateway, Config, Eureka | 2025.0.0 |
 | Build | Maven Multi-Module | 3.9+ |
 | Database | PostgreSQL | 16 (her servise ayrı container) |
 | Cache / Idempotency | Redis | 7 |
@@ -138,7 +141,7 @@ npm run build
 - JDK 21
 - Maven 3.9+
 - Docker Desktop (veya Docker Engine + Compose v2)
-- Host portları **15432-15441** (PG), **16379** (Redis), **19092** (Kafka), **18090** (Kafka UI), **19411** (Zipkin), **11025/18025** (MailHog), **15050** (pgAdmin), **18761** (Eureka), **18888** (Config), **18080** (Gateway), **19001-19010** (servisler) boş olmalı
+- Host portları **15432-15442** (PG), **16379** (Redis), **19092** (Kafka), **18090** (Kafka UI), **18084** (Kafka Connect), **18083** (Keycloak), **19411** (Zipkin), **11025/18025** (MailHog), **15050** (pgAdmin), **18761** (Eureka), **18888** (Config), **18080** (Gateway), **19001-19010** (servisler) boş olmalı
 
 ### 1. JAR'ları Üret
 
@@ -155,14 +158,14 @@ Bu adım `telco-common`'ı yerel Maven cache'e (`~/.m2/repository`) yazar ve 13 
 docker compose up -d --build
 ```
 
-Bu komut **28 container**'ı paralel ayağa kaldırır:
+Bu komut sistem container'larını paralel ayağa kaldırır:
 
 | Grup | Container'lar |
 |---|---|
 | **10 ayrı PostgreSQL** | `identity-postgres`, `customer-postgres`, `product-postgres`, `order-postgres`, `subscription-postgres`, `usage-postgres`, `billing-postgres`, `payment-postgres`, `notification-postgres`, `ticket-postgres` |
 | **3 altyapı servisi** | `discovery-server` (Eureka), `config-server`, `api-gateway` |
 | **10 iş mikroservisi** | `identity-service`, `customer-service`, `product-catalog-service`, `order-service`, `subscription-service`, `usage-service`, `billing-service`, `payment-service`, `notification-service`, `ticket-service` |
-| **Destek servisler** | `redis`, `kafka`, `kafka-ui`, `zipkin`, `mailhog`, `pgadmin` |
+| **Destek servisler** | `redis`, `kafka`, `kafka-init`, `kafka-connect`, `kafka-ui`, `keycloak-postgres`, `keycloak`, `zipkin`, `mailhog`, `pgadmin` |
 
 Her servis kendi PG container'ını `service_healthy` ile bekler; Kafka ve discovery-server hazır olmadan açılmaz.
 
@@ -182,6 +185,8 @@ docker compose logs --tail=50 -f            # tum sistem (uzun olur)
 | API Gateway routes | http://localhost:18080/actuator/gateway/routes |
 | Identity Swagger | http://localhost:19001/swagger-ui.html |
 | Kafka UI | http://localhost:18090 |
+| Kafka Connect | http://localhost:18084/connectors |
+| Keycloak | http://localhost:18083 |
 | Zipkin | http://localhost:19411 |
 | MailHog (SMTP UI) | http://localhost:18025 |
 | pgAdmin | http://localhost:15050 (admin@telcox.com / admin) |
@@ -238,11 +243,17 @@ mvn -pl services/identity-service spring-boot:run           # Terminal 4
 | Senaryo | Tip | Teknoloji |
 |---|---|---|
 | Gateway → Servis | Senkron | Spring Cloud Gateway + Eureka (`lb://`) |
-| Servis → Servis (data fetch) | Senkron | OpenFeign + Resilience4j |
+| Servis → Servis (query) | Senkron | Belgelenmiş query API + Resilience4j |
 | Servis → Servis (event) | Asenkron | Kafka + Outbox pattern |
 | CDR → Usage Service | Asenkron | Kafka |
 
 **Database-per-service** prensibi gereği bir mikroservis **başka bir servisin DB'sine doğrudan erişemez**. Veri ihtiyacı sadece API çağrısı veya event ile karşılanır.
+
+Mimari kararlar:
+
+- [ADR-0001: Spring Boot / Spring Cloud version baseline](architecture/adr/ADR-0001-spring-boot-cloud-baseline.md)
+- [ADR-0002: Remove OpenFeign from core service communication](architecture/adr/ADR-0002-remove-openfeign-from-core-service-communication.md)
+- [Event Backbone Standard](architecture/event-backbone.md)
 
 ---
 
@@ -256,6 +267,13 @@ Her domain değişikliğiyle aynı transaction içinde `*_OUTBOX_EVENT` tablosun
 
 ### Idempotent Consumer
 Kafka'dan tüketilen her event'in `eventId`'si `*_PROCESSED_EVENT.event_id` UNIQUE constraint ile kontrol edilir; aynı event tekrar gelirse atlanır.
+
+### Event Envelope / Topic Standardi
+Kafka domain event'leri `telco-common` icindeki `EventEnvelope<T>` sozlesmesini kullanir. Zorunlu alanlar: `eventId`, `type`, `aggregateId`, `correlationId`, `schemaVersion`.
+
+Topic formati: `telcox.<bounded-context>.<event-name>.v<major>`.
+
+Retry ve DLQ formati: `<topic>.retry.0`, `<topic>.retry.1`, `<topic>.dlq`. Detaylar `architecture/event-backbone.md` dosyasindadir.
 
 ### `telco-common` Değişikliği
 `telco-common` modülünde değişiklik yaptıktan sonra:
