@@ -1,6 +1,6 @@
 # Local-only folders
 .claude/
-/docs/
+#/docs/
 /odev/
 
 # Maven

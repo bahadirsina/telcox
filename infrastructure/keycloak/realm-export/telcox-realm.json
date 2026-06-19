@@ -1,0 +1,96 @@
+{
+  "realm": "telcox",
+  "enabled": true,
+  "displayName": "TelcoX CRM",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+
+  "roles": {
+    "realm": [
+      { "name": "ADMIN",    "description": "Platform yöneticisi (tam yetki)" },
+      { "name": "AGENT",    "description": "Çağrı merkezi / operasyon temsilcisi" },
+      { "name": "CUSTOMER", "description": "Son kullanıcı / abone" }
+    ]
+  },
+
+  "clients": [
+    {
+      "clientId": "telcox-frontend",
+      "name": "Signal Atlas Frontend (SPA)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://localhost:15173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "http://localhost:15173"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "defaultClientScopes": [
+        "openid",
+        "profile",
+        "email",
+        "roles"
+      ]
+    },
+    {
+      "clientId": "telcox-gateway",
+      "name": "API Gateway (resource server / confidential - opsiyonel)",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": true,
+      "protocol": "openid-connect"
+    }
+  ],
+
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@telcox.com",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Telcox",
+      "lastName": "Admin",
+      "credentials": [
+        { "type": "password", "value": "admin123", "temporary": false }
+      ],
+      "realmRoles": ["ADMIN"]
+    },
+    {
+      "username": "agent",
+      "email": "agent@telcox.com",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Operasyon",
+      "lastName": "Temsilcisi",
+      "credentials": [
+        { "type": "password", "value": "agent123", "temporary": false }
+      ],
+      "realmRoles": ["AGENT"]
+    },
+    {
+      "username": "customer",
+      "email": "customer@telcox.com",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Test",
+      "lastName": "Müşteri",
+      "credentials": [
+        { "type": "password", "value": "customer123", "temporary": false }
+      ],
+      "realmRoles": ["CUSTOMER"]
+    }
+  ]
+}
