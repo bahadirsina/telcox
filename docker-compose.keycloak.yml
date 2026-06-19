@@ -1,0 +1,81 @@
+# =============================================================================
+# SEC-01 — Keycloak + Keycloak PostgreSQL (override / ek dosya)
+#
+# Ana docker-compose.yml'e DOKUNMADAN, ayrı dosya olarak eklendi (INF-02 ile
+# merge çakışmasını önlemek için). İki kullanım şekli:
+#
+#   A) Birlikte çalıştır:
+#      docker compose -f docker-compose.yml -f docker-compose.keycloak.yml up -d
+#
+#   B) Stabilleşince ana docker-compose.yml içine taşı (keycloak + keycloak-postgres
+#      servislerini ve keycloak_pg_data volume'ünü kopyala).
+#
+# Host port: Keycloak 18083 (1xxxx port stratejisine uygun), KC-PG 15442.
+# Realm import: infrastructure/keycloak/realm-export/telcox-realm.json (SEC-02).
+# =============================================================================
+
+services:
+
+  keycloak-postgres:
+    image: postgres:16-alpine
+    container_name: keycloak-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: ${KC_DB_USER:-keycloak}
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
+    ports:
+      - "15442:5432"
+    volumes:
+      - keycloak_pg_data:/var/lib/postgresql/data
+    networks:
+      - telcox-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KC_DB_USER:-keycloak} -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: keycloak
+    restart: unless-stopped
+    command:
+      - start-dev
+      - --import-realm
+    environment:
+      # DB
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/keycloak
+      KC_DB_USERNAME: ${KC_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
+      # Bootstrap admin (Keycloak 26.x)
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      # Dev hostname/health
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "18083:8080"
+    volumes:
+      # SEC-02: realm import dosyaları
+      - ./infrastructure/keycloak/realm-export:/opt/keycloak/data/import:ro
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+    networks:
+      - telcox-net
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nhost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+volumes:
+  keycloak_pg_data:
+
+networks:
+  telcox-net:
+    driver: bridge
