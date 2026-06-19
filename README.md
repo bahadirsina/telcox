@@ -89,6 +89,46 @@ telco-crm-platform/                  (parent POM — BOM ve modül listesi)
 | Observability | Micrometer + Zipkin + OpenTelemetry | (BOM) |
 | Test | JUnit 5, Mockito, Testcontainers | 1.20.4 |
 | Container | Docker + Docker Compose v2 | — |
+| Operasyon UI | React + TypeScript + Vite | Signal Atlas |
+
+---
+
+## Signal Atlas Operasyon Arayüzü
+
+Stitch tasarım sistemi, `frontend/` altında 18 ekranlık gezilebilir bir React
+uygulaması olarak projeye entegre edilmiştir. Arayüz müşteri/KYC, katalog,
+sipariş saga, abonelik, kullanım, faturalama, ödeme, bildirim, ticket, yönetim
+ve platform operasyon akışlarını içerir.
+
+Backend modüllerinde REST controller katmanı henüz uygulanmadığı için arayüz
+varsayılan olarak güvenli demo modunda çalışır. Gateway route sözleşmeleri
+`frontend/src/api.ts` içinde hazırdır; canlı çağrılar şu değişken ile açılır:
+
+```bash
+VITE_ENABLE_LIVE_API=true
+```
+
+Lokal frontend geliştirme:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Adresler:
+
+| Çalışma şekli | Adres |
+|---|---|
+| Vite development server | http://localhost:5173 |
+| Docker Compose | http://localhost:15173 |
+
+Frontend build kontrolü:
+
+```bash
+cd frontend
+npm run build
+```
 
 ---
 

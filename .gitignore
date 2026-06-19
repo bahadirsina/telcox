@@ -49,6 +49,8 @@ secrets/
 # Build
 build/
 dist/
+node_modules/
+*.tsbuildinfo
 
 # Spring Boot
 *.original

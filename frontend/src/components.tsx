@@ -150,7 +150,7 @@ export function AppShell({
             </button>
           ))}
         </nav>
-        <button className="nav-profile" title="Profil">
+        <button className="nav-profile" title="Oturumu kapat" onClick={() => onNavigate("login")}>
           <UserRound size={18} /><span><b>Tamer Akdeniz</b><small>Platform Admin</small></span>
         </button>
       </aside>

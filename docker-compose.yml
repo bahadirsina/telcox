@@ -711,3 +711,27 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9010/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
       <<: *healthcheck-spring
+
+  # ==========================================================================
+  # SIGNAL ATLAS WEB UI
+  # ==========================================================================
+
+  signal-atlas-web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: /api/v1
+        # REST controller katmani tamamlanana kadar guvenli demo modu.
+        VITE_ENABLE_LIVE_API: "false"
+        VITE_ENVIRONMENT: UAT
+    image: telcox/signal-atlas-web:0.1.0
+    container_name: telcox-signal-atlas-web
+    restart: unless-stopped
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    ports:
+      - "15173:80"
+    networks:
+      - telcox-net
