@@ -1,0 +1,2 @@
+telcox.profile: test
+spring.cloud.gateway.discovery.locator.enabled: false
