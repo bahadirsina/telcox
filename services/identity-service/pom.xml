@@ -13,7 +13,7 @@
 
     <artifactId>identity-service</artifactId>
     <name>Identity Service</name>
-    <description>Kimlik, yetki, oturum (User/Role/Permission/JWT)</description>
+    <description>Keycloak kullanici profil ve audit adapter</description>
 
     <dependencies>
         <dependency>
@@ -73,6 +73,11 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
+        <!-- Boot 4 ships Flyway auto-configuration in its dedicated starter. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -92,19 +97,6 @@
         <dependency>
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-spring-boot4</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-impl</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-jackson</artifactId>
         </dependency>
 
         <dependency>
