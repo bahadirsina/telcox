@@ -38,7 +38,7 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.1
-    container_name: keycloak
+    container_name: telcox-keycloak
     restart: unless-stopped
     command:
       - start-dev
