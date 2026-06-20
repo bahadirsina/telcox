@@ -23,7 +23,7 @@ name: telcox
 #   15437=usage,    15438=billing,  15439=payment, 15440=notification, 15441=ticket
 #
 # Diger host portlari:
-#   16379=redis, 19092=kafka, 18090=kafka-ui, 19411=zipkin,
+#   16379=redis, 19092=kafka, 18090=kafka-ui, 18084=kafka-connect, 19411=zipkin,
 #   11025=mailhog-smtp, 18025=mailhog-web, 15050=pgadmin,
 #   18761=eureka, 18888=config-server, 18080=api-gateway,
 #   19001..19010 = is mikroservisleri
@@ -51,6 +51,7 @@ volumes:
 # -----------------------------------------------------------------------------
 x-postgres-common: &postgres-common
   image: postgres:16-alpine
+  command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=20", "-c", "max_wal_senders=20"]
   restart: unless-stopped
   networks:
     - telcox-net
@@ -139,6 +140,39 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
     networks:
       - telcox-net
+
+  # Debezium PostgreSQL connector eklentisini içeren Kafka Connect worker.
+  # Servis bazlı connector tanımları EVT-05 kapsamında REST API ile yüklenecek.
+  kafka-connect:
+    image: debezium/connect:2.7.3.Final
+    container_name: telcox-kafka-connect
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "18084:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      GROUP_ID: telcox-debezium-connect
+      CONFIG_STORAGE_TOPIC: telcox_connect_configs
+      OFFSET_STORAGE_TOPIC: telcox_connect_offsets
+      STATUS_STORAGE_TOPIC: telcox_connect_status
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+    networks:
+      - telcox-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8083/connectors >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   zipkin:
     image: openzipkin/zipkin:latest

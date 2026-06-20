@@ -38,6 +38,7 @@ Her mikroservis **kendi PostgreSQL container'ına** sahiptir. Servisler arası r
 | Redis | **16379** | 6379 |
 | Kafka (broker) | **19092** | 9092 |
 | Kafka UI | **18090** | 8080 |
+| Kafka Connect (Debezium) | **18084** | 8083 |
 | Zipkin | **19411** | 9411 |
 | MailHog SMTP | **11025** | 1025 |
 | MailHog Web | **18025** | 8025 |
@@ -138,7 +139,7 @@ npm run build
 - JDK 21
 - Maven 3.9+
 - Docker Desktop (veya Docker Engine + Compose v2)
-- Host portları **15432-15441** (PG), **16379** (Redis), **19092** (Kafka), **18090** (Kafka UI), **19411** (Zipkin), **11025/18025** (MailHog), **15050** (pgAdmin), **18761** (Eureka), **18888** (Config), **18080** (Gateway), **19001-19010** (servisler) boş olmalı
+- Host portları **15432-15441** (PG), **16379** (Redis), **19092** (Kafka), **18090** (Kafka UI), **18084** (Kafka Connect), **19411** (Zipkin), **11025/18025** (MailHog), **15050** (pgAdmin), **18761** (Eureka), **18888** (Config), **18080** (Gateway), **19001-19010** (servisler) boş olmalı
 
 ### 1. JAR'ları Üret
 
@@ -182,6 +183,7 @@ docker compose logs --tail=50 -f            # tum sistem (uzun olur)
 | API Gateway routes | http://localhost:18080/actuator/gateway/routes |
 | Identity Swagger | http://localhost:19001/swagger-ui.html |
 | Kafka UI | http://localhost:18090 |
+| Kafka Connect REST API | http://localhost:18084/connectors |
 | Zipkin | http://localhost:19411 |
 | MailHog (SMTP UI) | http://localhost:18025 |
 | pgAdmin | http://localhost:15050 (admin@telcox.com / admin) |
