@@ -12,12 +12,12 @@ public interface DomainEvent {
     /** Event icin global unique id; consumer tarafindaki PROCESSED_EVENT.eventId. */
     UUID eventId();
 
-    /** Event tipi (customer-created, order-confirmed vb.). */
-    String type();
+    /** Event'in turu (CustomerRegistered, OrderConfirmed vb.). */
+    String eventType();
 
-    /** Geriye uyumluluk icin eski eventType accessor'i. */
-    default String eventType() {
-        return type();
+    /** Event tipi icin yeni envelope alias'i. */
+    default String type() {
+        return eventType();
     }
 
     /** Olusturan servis adi (correlation icin). */
@@ -36,5 +36,7 @@ public interface DomainEvent {
     String correlationId();
 
     /** Event semasinin major versiyonu. */
-    int schemaVersion();
+    default int schemaVersion() {
+        return 1;
+    }
 }

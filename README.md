@@ -38,9 +38,7 @@ Her mikroservis **kendi PostgreSQL container'ına** sahiptir. Servisler arası r
 | Redis | **16379** | 6379 |
 | Kafka (broker) | **19092** | 9092 |
 | Kafka UI | **18090** | 8080 |
-| Kafka Connect / Debezium | **18084** | 8083 |
-| Keycloak | **18083** | 8080 |
-| Keycloak PostgreSQL | **15442** | 5432 |
+| Kafka Connect (Debezium) | **18084** | 8083 |
 | Zipkin | **19411** | 9411 |
 | MailHog SMTP | **11025** | 1025 |
 | MailHog Web | **18025** | 8025 |
@@ -141,7 +139,7 @@ npm run build
 - JDK 21
 - Maven 3.9+
 - Docker Desktop (veya Docker Engine + Compose v2)
-- Host portları **15432-15442** (PG), **16379** (Redis), **19092** (Kafka), **18090** (Kafka UI), **18084** (Kafka Connect), **18083** (Keycloak), **19411** (Zipkin), **11025/18025** (MailHog), **15050** (pgAdmin), **18761** (Eureka), **18888** (Config), **18080** (Gateway), **19001-19010** (servisler) boş olmalı
+- Host portları **15432-15441** (PG), **16379** (Redis), **19092** (Kafka), **18090** (Kafka UI), **18084** (Kafka Connect), **19411** (Zipkin), **11025/18025** (MailHog), **15050** (pgAdmin), **18761** (Eureka), **18888** (Config), **18080** (Gateway), **19001-19010** (servisler) boş olmalı
 
 ### 1. JAR'ları Üret
 
@@ -165,7 +163,7 @@ Bu komut sistem container'larını paralel ayağa kaldırır:
 | **10 ayrı PostgreSQL** | `identity-postgres`, `customer-postgres`, `product-postgres`, `order-postgres`, `subscription-postgres`, `usage-postgres`, `billing-postgres`, `payment-postgres`, `notification-postgres`, `ticket-postgres` |
 | **3 altyapı servisi** | `discovery-server` (Eureka), `config-server`, `api-gateway` |
 | **10 iş mikroservisi** | `identity-service`, `customer-service`, `product-catalog-service`, `order-service`, `subscription-service`, `usage-service`, `billing-service`, `payment-service`, `notification-service`, `ticket-service` |
-| **Destek servisler** | `redis`, `kafka`, `kafka-init`, `kafka-connect`, `kafka-ui`, `keycloak-postgres`, `keycloak`, `zipkin`, `mailhog`, `pgadmin` |
+| **Destek servisler** | `redis`, `kafka`, `kafka-connect`, `kafka-ui`, `zipkin`, `mailhog`, `pgadmin` |
 
 Her servis kendi PG container'ını `service_healthy` ile bekler; Kafka ve discovery-server hazır olmadan açılmaz.
 
@@ -185,8 +183,7 @@ docker compose logs --tail=50 -f            # tum sistem (uzun olur)
 | API Gateway routes | http://localhost:18080/actuator/gateway/routes |
 | Identity Swagger | http://localhost:19001/swagger-ui.html |
 | Kafka UI | http://localhost:18090 |
-| Kafka Connect | http://localhost:18084/connectors |
-| Keycloak | http://localhost:18083 |
+| Kafka Connect REST API | http://localhost:18084/connectors |
 | Zipkin | http://localhost:19411 |
 | MailHog (SMTP UI) | http://localhost:18025 |
 | pgAdmin | http://localhost:15050 (admin@telcox.com / admin) |
@@ -251,9 +248,9 @@ mvn -pl services/identity-service spring-boot:run           # Terminal 4
 
 Mimari kararlar:
 
-- [ADR-0001: Spring Boot / Spring Cloud version baseline](architecture/adr/ADR-0001-spring-boot-cloud-baseline.md)
-- [ADR-0002: Remove OpenFeign from core service communication](architecture/adr/ADR-0002-remove-openfeign-from-core-service-communication.md)
-- [Event Backbone Standard](architecture/event-backbone.md)
+- [ADR-0001: Spring Boot / Spring Cloud version baseline](docs/adr/ADR-0001-spring-boot-cloud-baseline.md)
+- [ADR-0002: Remove OpenFeign from core service communication](docs/adr/ADR-0002-remove-openfeign-from-core-service-communication.md)
+- [Event Backbone Standard](docs/event-backbone.md)
 
 ---
 
@@ -271,9 +268,9 @@ Kafka'dan tüketilen her event'in `eventId`'si `*_PROCESSED_EVENT.event_id` UNIQ
 ### Event Envelope / Topic Standardi
 Kafka domain event'leri `telco-common` icindeki `EventEnvelope<T>` sozlesmesini kullanir. Zorunlu alanlar: `eventId`, `type`, `aggregateId`, `correlationId`, `schemaVersion`.
 
-Topic formati: `telcox.<bounded-context>.<event-name>.v<major>`.
+Topic formati PR #4 Debezium connector ciktilariyla aynidir: `telcox.events.<aggregate_type>`.
 
-Retry ve DLQ formati: `<topic>.retry.0`, `<topic>.retry.1`, `<topic>.dlq`. Detaylar `architecture/event-backbone.md` dosyasindadir.
+Retry ve DLQ formati: `<topic>.retry.0`, `<topic>.retry.1`, `<topic>.dlq`. Detaylar `docs/event-backbone.md` dosyasindadir.
 
 ### `telco-common` Değişikliği
 `telco-common` modülünde değişiklik yaptıktan sonra:

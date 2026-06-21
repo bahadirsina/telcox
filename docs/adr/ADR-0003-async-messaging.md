@@ -71,7 +71,7 @@ Tüm mesajlar `telco-common`'daki `DomainEvent` sözleşmesini taşır. Minimum 
 | `aggregateType` | String | `CUSTOMER`, `ORDER`, ... |
 | `occurredAt` | OffsetDateTime (UTC) | Oluşma zamanı |
 | `correlationId` | String | Gateway tarafından enjekte (INF-04 ile uyumlu) |
-| `schemaVersion` | int | **EKLENECEK** — şu an `DomainEvent`'te yok (EVT-08, bkz. §5) |
+| `schemaVersion` | int | Event schema major versiyonu; `DomainEvent` varsayılanı `1` |
 
 ## 4. Sonuçlar
 
@@ -83,7 +83,7 @@ reply/compensation ile yönetilebilir; idempotency standardı net.
 
 ## 5. Takip işleri (bu ADR'ı uygulayan task'lar)
 
-- `DomainEvent` interface'ine `schemaVersion()` eklenmeli (EVT-08 ile).
+- Event envelope ve `schemaVersion()` kuralları EVT-01/EVT-08 kapsamında `docs/event-backbone.md` içinde detaylandırılır.
 - Topic naming standardı EVT-02'de tanımlanacak; bu ADR'a referans verecek.
 - Outbox tablo kolonları Debezium Outbox SMT'ye uyumlanacak (EVT-03).
 - Read-model sorumlulukları **ADR-0005**'te listelenir.

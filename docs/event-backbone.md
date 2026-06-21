@@ -11,9 +11,9 @@ Required envelope fields:
 
 | Field | Type | Rule |
 |---|---|---|
-| `eventId` | UUID | Globally unique idempotency key. |
-| `type` | string | Business event type in kebab-case. |
-| `aggregateId` | UUID | Aggregate instance id. |
+| `eventId` | UUID | Globally unique idempotency key. Must be provided by callers or created through `EventEnvelope.withGeneratedId(...)`. |
+| `type` | string | Business event type. Mirrors the outbox `event_type` column. |
+| `aggregateId` | UUID | Aggregate instance id. Mirrors the outbox `aggregate_id` column. |
 | `correlationId` | string | Request or saga correlation id. |
 | `schemaVersion` | integer | Major schema version, starting at `1`. |
 
@@ -22,33 +22,40 @@ Recommended fields:
 | Field | Type | Rule |
 |---|---|---|
 | `sourceService` | string | Producing service name. |
-| `aggregateType` | string | Aggregate category such as `CUSTOMER` or `ORDER`. |
-| `occurredAt` | timestamp | UTC event creation time. |
-| `payload` | object | Versioned business payload. |
+| `aggregateType` | string | Aggregate category such as `CUSTOMER` or `ORDER`. Mirrors the outbox `aggregate_type` column. |
+| `occurredAt` | timestamp | UTC event creation time. Mirrors the outbox `created_at` column. |
+| `payload` | object | Versioned business payload. Mirrors the outbox `payload_json` column. |
 | `metadata` | object | String key/value technical metadata. |
 
 ## EVT-02: Topic naming
 
-Canonical domain event topic format:
+PR #4 Debezium connectors are the source of truth for routed outbox topics.
+Each connector uses Debezium `EventRouter` with:
 
 ```text
-telcox.<bounded-context>.<event-name>.v<major>
+transforms.outbox.route.by.field=aggregate_type
+transforms.outbox.route.topic.replacement=telcox.events.${routedByValue}
 ```
 
-Examples:
+Canonical routed topic format:
 
 ```text
-telcox.customer.customer-created.v1
-telcox.order.order-created.v1
-telcox.billing.invoice-issued.v1
+telcox.events.<aggregate_type>
 ```
 
-Rules:
+Examples that match the connector output:
 
-- Use lowercase kebab-case for bounded context and event name.
-- The topic major version must match `schemaVersion`.
-- CDC raw topics produced by Debezium may use `telcox.cdc.<service>.*`, but
-  routed business topics must use the canonical format.
+```text
+telcox.events.CUSTOMER
+telcox.events.ORDER
+telcox.events.SUBSCRIPTION
+telcox.events.INVOICE
+telcox.events.PAYMENT
+```
+
+Connector source prefixes remain service-scoped, for example
+`telcox.customer`, `telcox.order`, and `telcox.billing`; routed business event
+topics use `telcox.events.<aggregate_type>`.
 
 ## EVT-07: Retry and DLQ strategy
 
@@ -82,15 +89,21 @@ Compatibility rules:
 
 - Additive optional fields are backward compatible.
 - Removing fields, renaming fields, changing field types, or changing required
-  semantics requires a new major version and a new topic suffix.
+  semantics requires a new major schema version.
 - Consumers must ignore unknown fields.
 - Producers must keep publishing the previous major version until all consumers
   migrate.
 - Payload defaults must be documented in the event producer module.
 
-Version example:
+Schema version example:
 
-```text
-telcox.customer.customer-created.v1
-telcox.customer.customer-created.v2
+```json
+{
+  "eventId": "18fd563d-8c42-4718-a2df-8b87edce866e",
+  "type": "customer-created",
+  "aggregateId": "280e7ec9-643f-4307-b05c-13c47d937edc",
+  "aggregateType": "CUSTOMER",
+  "correlationId": "corr-20260622-001",
+  "schemaVersion": 1
+}
 ```
