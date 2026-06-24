@@ -1,0 +1,2 @@
+telcox.profile: test
+spring.quartz.auto-startup: false

@@ -1,0 +1,10 @@
+telcox.profile: dev
+server.port: 9008
+spring.kafka.consumer.group-id: payment-service
+telcox.payment.psp:
+  mock-mode: true
+  base-url: http://localhost:18888/mock-psp
+spring.datasource:
+  url: jdbc:postgresql://localhost:15439/payment_db
+  username: telcox
+  password: telcox

@@ -16,6 +16,7 @@
     <description>Cok kanalli bildirim (SMS, EMAIL, PUSH) gonderimi</description>
 
     <dependencies>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-flyway</artifactId></dependency>
         <dependency><groupId>com.telcox</groupId><artifactId>telco-common</artifactId></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-jpa</artifactId></dependency>

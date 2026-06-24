@@ -43,7 +43,7 @@ zaman ilgili servisin PostgreSQL'idir.
 ```
 <service>:<amac>:<id>
 örn:  gateway:ratelimit:ip:1.2.3.4
-      identity:denylist:jti:<jti>
+      gateway:denylist:jti:<jti>
       customer:cache:profile:<customerId>
 ```
 

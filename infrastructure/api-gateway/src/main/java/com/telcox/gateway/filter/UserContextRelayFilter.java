@@ -3,57 +3,75 @@ package com.telcox.gateway.filter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-import java.util.stream.Collectors;
+import java.util.Comparator;
 
 /**
- * SEC-04 (komşu task — bu modüle yakın olduğu için iskeleti burada).
- *
- * Doğrulanmış JWT'den kullanıcı kimliğini ve rollerini çıkarıp downstream servislere
- * X-User-Id ve X-User-Roles header'larıyla relay eder. Böylece backend servisler JWT'yi
- * yeniden parse etmeden kullanıcı bağlamına erişir.
- *
- * NOT: Bu task SEC-04 sahibine ait olabilir. Sahibi netleşince taşınır/silinir;
- * INF-04 + SEC-03 ile aynı filtre zincirinde durduğu için iskelet olarak eklendi.
+ * Relays a trusted identity context from the gateway to downstream services.
+ * Client-supplied identity headers are always removed first, so downstream
+ * services only receive values derived from a validated JWT.
  */
 @Component
 public class UserContextRelayFilter implements GlobalFilter, Ordered {
 
+    public static final String USER_ID_HEADER = "X-User-Id";
+    public static final String ROLES_HEADER = "X-Roles";
+    // Remove the former header too, preventing mixed clients from spoofing it.
+    public static final String LEGACY_ROLES_HEADER = "X-User-Roles";
+
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         return ReactiveSecurityContextHolder.getContext()
-                .map(ctx -> ctx.getAuthentication())
+                .map(context -> context.getAuthentication())
                 .filter(JwtAuthenticationToken.class::isInstance)
                 .cast(JwtAuthenticationToken.class)
-                .map(auth -> {
-                    Jwt jwt = auth.getToken();
-                    String userId = jwt.getSubject();
-                    String roles = auth.getAuthorities().stream()
-                            .map(a -> a.getAuthority())
-                            .filter(a -> a.startsWith("ROLE_"))
-                            .map(a -> a.substring("ROLE_".length()))
-                            .collect(Collectors.joining(","));
-
-                    ServerWebExchange mutated = exchange.mutate()
-                            .request(r -> r
-                                    .header("X-User-Id", userId)
-                                    .header("X-User-Roles", roles))
-                            .build();
-                    return mutated;
-                })
-                .defaultIfEmpty(exchange)
+                .map(this::trustedContext)
+                .defaultIfEmpty(TrustedContext.empty())
+                .map(context -> removeUntrustedHeaders(exchange, context))
                 .flatMap(chain::filter);
+    }
+
+    private TrustedContext trustedContext(JwtAuthenticationToken authentication) {
+        String roles = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(authority -> authority.startsWith("ROLE_"))
+                .map(authority -> authority.substring("ROLE_".length()))
+                .distinct()
+                .sorted(Comparator.naturalOrder())
+                .reduce((left, right) -> left + "," + right)
+                .orElse("");
+
+        return new TrustedContext(authentication.getToken().getSubject(), roles);
+    }
+
+    private ServerWebExchange removeUntrustedHeaders(ServerWebExchange exchange, TrustedContext context) {
+        return exchange.mutate()
+                .request(request -> request.headers(headers -> {
+                    headers.remove(USER_ID_HEADER);
+                    headers.remove(ROLES_HEADER);
+                    headers.remove(LEGACY_ROLES_HEADER);
+                    if (context.userId() != null && !context.userId().isBlank()) {
+                        headers.set(USER_ID_HEADER, context.userId());
+                        headers.set(ROLES_HEADER, context.roles());
+                    }
+                }))
+                .build();
     }
 
     @Override
     public int getOrder() {
-        // Security'den sonra, route'lama sırasında çalışmalı
         return Ordered.LOWEST_PRECEDENCE - 1;
+    }
+
+    private record TrustedContext(String userId, String roles) {
+        static TrustedContext empty() {
+            return new TrustedContext(null, "");
+        }
     }
 }

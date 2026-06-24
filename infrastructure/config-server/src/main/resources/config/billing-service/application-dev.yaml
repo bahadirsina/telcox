@@ -1,0 +1,9 @@
+telcox.profile: dev
+server.port: 9007
+spring.kafka.consumer.group-id: billing-service
+spring.quartz.job-store-type: jdbc
+spring.quartz.jdbc.initialize-schema: never
+spring.datasource:
+  url: jdbc:postgresql://localhost:15438/billing_db
+  username: telcox
+  password: telcox

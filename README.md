@@ -39,6 +39,8 @@ Her mikroservis **kendi PostgreSQL container'ına** sahiptir. Servisler arası r
 | Kafka (broker) | **19092** | 9092 |
 | Kafka UI | **18090** | 8080 |
 | Kafka Connect (Debezium) | **18084** | 8083 |
+| Keycloak | **18083** | 8080 |
+| Keycloak PostgreSQL | **15442** | 5432 |
 | Zipkin | **19411** | 9411 |
 | MailHog SMTP | **11025** | 1025 |
 | MailHog Web | **18025** | 8025 |

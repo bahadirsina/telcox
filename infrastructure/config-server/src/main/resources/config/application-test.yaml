@@ -1,0 +1,11 @@
+telcox:
+  environment: test
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+spring:
+  kafka:
+    listener:
+      auto-startup: false

@@ -1,0 +1,8 @@
+telcox.profile: dev
+server.port: 9003
+spring.cache.type: redis
+spring.kafka.consumer.group-id: product-catalog-service
+spring.datasource:
+  url: jdbc:postgresql://localhost:15434/product_db
+  username: telcox
+  password: telcox

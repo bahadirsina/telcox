@@ -1,0 +1,17 @@
+spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP}
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL}
+telcox:
+  environment: prod
+logging:
+  level:
+    root: INFO
+    com.telcox: INFO

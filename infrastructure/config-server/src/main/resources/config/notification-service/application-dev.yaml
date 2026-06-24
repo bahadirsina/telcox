@@ -1,0 +1,11 @@
+telcox.profile: dev
+server.port: 9009
+spring.kafka.consumer.group-id: notification-service
+spring.mail.host: localhost
+spring.mail.port: 11025
+telcox.notification.sms.mock-mode: true
+telcox.notification.push.mock-mode: true
+spring.datasource:
+  url: jdbc:postgresql://localhost:15440/notification_db
+  username: telcox
+  password: telcox

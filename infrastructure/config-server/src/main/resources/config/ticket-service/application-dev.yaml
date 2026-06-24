@@ -1,0 +1,7 @@
+telcox.profile: dev
+server.port: 9010
+spring.kafka.consumer.group-id: ticket-service
+spring.datasource:
+  url: jdbc:postgresql://localhost:15441/ticket_db
+  username: telcox
+  password: telcox

@@ -1,0 +1,11 @@
+telcox.profile: dev
+server.port: 9001
+spring.kafka.consumer.group-id: identity-service
+spring.flyway:
+  enabled: true
+  baseline-on-migrate: true
+  locations: classpath:db/migration
+spring.datasource:
+  url: jdbc:postgresql://localhost:15432/identity_db
+  username: telcox
+  password: telcox

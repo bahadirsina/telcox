@@ -1,0 +1,7 @@
+telcox.profile: dev
+server.port: 9004
+spring.kafka.consumer.group-id: order-service
+spring.datasource:
+  url: jdbc:postgresql://localhost:15435/order_db
+  username: telcox
+  password: telcox
