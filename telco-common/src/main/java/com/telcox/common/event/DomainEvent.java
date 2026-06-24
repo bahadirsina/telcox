@@ -15,6 +15,11 @@ public interface DomainEvent {
     /** Event'in turu (CustomerRegistered, OrderConfirmed vb.). */
     String eventType();
 
+    /** Event tipi icin yeni envelope alias'i. */
+    default String type() {
+        return eventType();
+    }
+
     /** Olusturan servis adi (correlation icin). */
     String sourceService();
 
@@ -29,4 +34,9 @@ public interface DomainEvent {
 
     /** Distributed tracing icin gateway tarafindan enjekte edilen id. */
     String correlationId();
+
+    /** Event semasinin major versiyonu. */
+    default int schemaVersion() {
+        return 1;
+    }
 }
