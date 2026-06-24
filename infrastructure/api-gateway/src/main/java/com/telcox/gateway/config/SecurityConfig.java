@@ -26,7 +26,7 @@ import java.util.Map;
 
 /**
  * SEC-03 — API Gateway'i OAuth2 Resource Server yapar; gelen JWT'yi Keycloak realm'ine
- * karşı doğrular (issuer-uri application.yml'de).
+ * karşı doğrular (issuer-uri application.yaml'da).
  *
  * Reaktif gateway (gateway-server-webflux) olduğu için SecurityWebFilterChain kullanılır.
  * Keycloak rollerini (realm_access.roles) ROLE_* authority'lerine çevirir.

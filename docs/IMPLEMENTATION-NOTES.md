@@ -12,20 +12,20 @@ ve **karar bekleyen** noktaları özetler. Task sahibi: _(senin adın)_.
 | ARCH-05 | `docs/adr/ADR-0005-projections-read-models.md` | Yeni |
 | (index) | `docs/adr/README.md` | Yeni |
 | INF-01 | `pom.xml` (root) | Düzenlendi |
-| INF-04 | `.../gateway/config/CorsConfig.java`, `.../config/RateLimitConfig.java`, `.../filter/CorrelationIdFilter.java`, `application.yml` | Yeni + düzenleme |
-| SEC-03 | `.../gateway/config/SecurityConfig.java`, `api-gateway/pom.xml`, `application.yml` | Yeni + düzenleme |
+| INF-04 | `.../gateway/config/CorsConfig.java`, `.../config/RateLimitConfig.java`, `.../filter/CorrelationIdFilter.java`, `application.yaml` | Yeni + düzenleme |
+| SEC-03 | `.../gateway/config/SecurityConfig.java`, `api-gateway/pom.xml`, `application.yaml` | Yeni + düzenleme |
 | SEC-04* | `.../gateway/filter/UserContextRelayFilter.java` | Yeni (*komşu task, bkz. aşağı) |
-| SEC-01 | `docker-compose.keycloak.yml`, `.env.keycloak.example` | Yeni |
+| SEC-01 | `docker-compose.yml`, `.env.example` | Yeni + düzenleme |
 | SEC-02 | `infrastructure/keycloak/realm-export/telcox-realm.json` | Yeni |
 
 ## Çalıştırma sırası (uçtan uca doğrulama)
 
 ```bash
 # 1) Ortam değişkenleri
-cat .env.keycloak.example >> .env        # değerleri kontrol et
+cp .env.example .env                     # değerleri kontrol et
 
 # 2) Keycloak + KC-Postgres'i ayağa kaldır (realm otomatik import)
-docker compose -f docker-compose.yml -f docker-compose.keycloak.yml up -d keycloak-postgres keycloak
+docker compose up -d keycloak-postgres keycloak
 
 # 3) Realm import oldu mu?  ->  http://localhost:18083  (admin/admin)
 #    Realm 'telcox' altında ADMIN/AGENT/CUSTOMER rolleri ve test user'lar görünmeli.
@@ -56,11 +56,11 @@ mvn -pl infrastructure/api-gateway spring-boot:run
    correlation-id (INF-04) ile aynı zincirde. Eğer SEC-04 başka birindeyse, o kişiyle
    sahipliği netleştir; çift implementasyon olmasın.
 
-4. **INF-02 (compose):** Keycloak ayrı override dosyasında tutuldu ki INF-02'nin Kafka
-   Connect/Debezium eklemeleriyle merge çakışması olmasın. Stabilleşince ana compose'a taşınır.
+4. **INF-02 (compose):** Keycloak, Kafka Connect ve Debezium servisleri ana
+   `docker-compose.yml` içinde birlikte yönetilir.
 
 ## Gateway namespace notu
-Mevcut `application.yml`, route'ları `spring.cloud.gateway.routes` altında tutuyordu; aynen
+Mevcut `application.yaml`, route'ları `spring.cloud.gateway.routes` altında tutuyor; aynen
 korundu, yalnızca `default-filters` + güvenlik eklendi. Build sırasında route'lar yüklenmezse
 Spring Cloud 2025.x `gateway-server-webflux` için prefix'in `spring.cloud.gateway.server.webflux`
 olup olmadığını kontrol et (sürüme göre değişebilir).

@@ -9,7 +9,9 @@ spring:
     config:
       server:
         native:
-          search-locations: classpath:/config/,classpath:/config/{application}/
+          search-locations:
+            - classpath:/config/
+            - classpath:/config/{application}/
 eureka:
   client:
     service-url:

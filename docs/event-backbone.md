@@ -29,33 +29,35 @@ Recommended fields:
 
 ## EVT-02: Topic naming
 
-PR #4 Debezium connectors are the source of truth for routed outbox topics.
-Each connector uses Debezium `EventRouter` with:
+Debezium connectors under `infrastructure/debezium/connectors` are the source
+of truth for routed outbox topics. Each connector uses Debezium `EventRouter`
+with:
 
 ```text
-transforms.outbox.route.by.field=aggregate_type
-transforms.outbox.route.topic.replacement=telcox.events.${routedByValue}
+transforms.outbox.route.by.field=event_type
+transforms.outbox.route.topic.replacement=telcox.<context>.${routedByValue}.v1
 ```
 
 Canonical routed topic format:
 
 ```text
-telcox.events.<aggregate_type>
+telcox.<context>.<event_type>.v1
 ```
 
 Examples that match the connector output:
 
 ```text
-telcox.events.CUSTOMER
-telcox.events.ORDER
-telcox.events.SUBSCRIPTION
-telcox.events.INVOICE
-telcox.events.PAYMENT
+telcox.customer.customer-created.v1
+telcox.order.order-confirmed.v1
+telcox.subscription.subscription-activated.v1
+telcox.billing.invoice-issued.v1
+telcox.payment.payment-captured.v1
 ```
 
-Connector source prefixes remain service-scoped, for example
-`telcox.customer`, `telcox.order`, and `telcox.billing`; routed business event
-topics use `telcox.events.<aggregate_type>`.
+The `<context>` segment is the service or bounded-context prefix configured in
+the connector, for example `customer`, `order`, `billing`, or
+`product-catalog`. The `<event_type>` segment is read from the outbox
+`event_type` column and is versioned with the major schema suffix.
 
 ## EVT-07: Retry and DLQ strategy
 

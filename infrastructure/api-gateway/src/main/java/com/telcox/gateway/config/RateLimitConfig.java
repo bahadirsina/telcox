@@ -10,7 +10,7 @@ import reactor.core.publisher.Mono;
  * INF-04 — Rate limit anahtarı çözümleyici.
  *
  * Kimliği doğrulanmış istekte kullanıcı (JWT 'sub'), aksi halde client IP baz alınır.
- * application.yml'deki RequestRateLimiter filtresi bu bean'i "#{@userOrIpKeyResolver}"
+ * application.yaml'daki RequestRateLimiter filtresi bu bean'i "#{@userOrIpKeyResolver}"
  * ile referanslar. Sayaçlar Redis'te tutulur (ADR-0004 sınırlarına uygun).
  */
 @Configuration

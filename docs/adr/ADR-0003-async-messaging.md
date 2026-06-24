@@ -10,9 +10,10 @@
 ## 1. Bağlam
 
 TelcoX **database-per-service** prensibiyle çalışır: bir servis başka bir servisin
-veritabanına erişemez (FK yok, yalnızca UUID/business key ile logical ref). Bugün
-servisler arası senkron çağrı için OpenFeign + Eureka kullanımı README'de geçiyor,
-ancak ARCH-02 ile Feign'in **core servis iletişiminden çıkarılması** kararlaştırılıyor.
+veritabanına erişemez (FK yok, yalnızca UUID/business key ile logical ref). Önceki
+baseline'da servisler arası senkron çağrı için OpenFeign + Eureka kullanımı
+geçiyordu, ancak ARCH-02 ile Feign'in **core servis iletişiminden çıkarılması**
+kararlaştırıldı.
 
 Bu durumda servisler arası **veri tutarlılığı** ve **iş akışı koordinasyonu** için
 net bir asenkron mesajlaşma standardına ihtiyaç var. Bu ADR bu standardı tanımlar.

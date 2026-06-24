@@ -1,4 +1,5 @@
 telcox.profile: prod
+server.port: 9001
 spring.flyway:
   enabled: true
   baseline-on-migrate: true

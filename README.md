@@ -165,7 +165,7 @@ Bu komut sistem container'larını paralel ayağa kaldırır:
 | **10 ayrı PostgreSQL** | `identity-postgres`, `customer-postgres`, `product-postgres`, `order-postgres`, `subscription-postgres`, `usage-postgres`, `billing-postgres`, `payment-postgres`, `notification-postgres`, `ticket-postgres` |
 | **3 altyapı servisi** | `discovery-server` (Eureka), `config-server`, `api-gateway` |
 | **10 iş mikroservisi** | `identity-service`, `customer-service`, `product-catalog-service`, `order-service`, `subscription-service`, `usage-service`, `billing-service`, `payment-service`, `notification-service`, `ticket-service` |
-| **Destek servisler** | `redis`, `kafka`, `kafka-connect`, `kafka-ui`, `zipkin`, `mailhog`, `pgadmin` |
+| **Destek servisler** | `redis`, `kafka`, `kafka-connect`, `kafka-ui`, `keycloak`, `keycloak-postgres`, `zipkin`, `mailhog`, `pgadmin` |
 
 Her servis kendi PG container'ını `service_healthy` ile bekler; Kafka ve discovery-server hazır olmadan açılmaz.
 
@@ -222,7 +222,7 @@ mvn -pl infrastructure/api-gateway      spring-boot:run     # Terminal 3
 mvn -pl services/identity-service spring-boot:run           # Terminal 4
 ```
 
-`application.yml` default değerleri her servisin doğru host port'una bağlanır (`identity` → `localhost:15432`, `customer` → `localhost:15433`, vb.).
+`application.yaml` default değerleri her servisin doğru host port'una bağlanır (`identity` → `localhost:15432`, `customer` → `localhost:15433`, vb.).
 
 > `.env.example` dosyasını `.env` olarak kopyalayıp override edebilirsin.
 
@@ -230,8 +230,8 @@ mvn -pl services/identity-service spring-boot:run           # Terminal 4
 
 ## Konfigürasyon Hiyerarşisi
 
-1. **`infrastructure/config-server/src/main/resources/config/application.yml`** — Tüm servislerin paylaştığı ortak ayarlar (logging, actuator, resilience4j vb.)
-2. **`services/<svc>/src/main/resources/application.yml`** — Servise özel ayarlar (port, DB adı, Kafka group-id)
+1. **`infrastructure/config-server/src/main/resources/config/application.yaml`** — Tüm servislerin paylaştığı ortak ayarlar (logging, actuator, resilience4j vb.)
+2. **`services/<svc>/src/main/resources/application.yaml`** — Servise özel ayarlar (port, DB adı, Kafka group-id)
 3. **Docker compose `environment:`** — Container içinde `DB_HOST`, `KAFKA_BOOTSTRAP`, `EUREKA_URL` vb. override edilir
 4. **Process env / `.env`** — Lokal `mvn spring-boot:run` çalıştırırken override için
 
@@ -270,7 +270,7 @@ Kafka'dan tüketilen her event'in `eventId`'si `*_PROCESSED_EVENT.event_id` UNIQ
 ### Event Envelope / Topic Standardi
 Kafka domain event'leri `telco-common` icindeki `EventEnvelope<T>` sozlesmesini kullanir. Zorunlu alanlar: `eventId`, `type`, `aggregateId`, `correlationId`, `schemaVersion`.
 
-Topic formati PR #4 Debezium connector ciktilariyla aynidir: `telcox.events.<aggregate_type>`.
+Topic formati Debezium connector ciktilariyla aynidir: `telcox.<context>.<event-type>.v1`.
 
 Retry ve DLQ formati: `<topic>.retry.0`, `<topic>.retry.1`, `<topic>.dlq`. Detaylar `docs/event-backbone.md` dosyasindadir.
 
