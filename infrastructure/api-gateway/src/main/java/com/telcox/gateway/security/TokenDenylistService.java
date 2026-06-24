@@ -8,7 +8,10 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.time.Instant;
 
-/** Short-lived, gateway-owned token revocation helper backed by Redis. */
+/**
+ * Short-lived, gateway-owned token revocation helper backed by Redis.
+ * Redis ulaşılamazsa doğrulanmış token da fail-closed olarak reddedilir.
+ */
 @Service
 public class TokenDenylistService {
 
@@ -23,7 +26,7 @@ public class TokenDenylistService {
         if (jwt.getId() == null || jwt.getId().isBlank()) {
             return Mono.just(false);
         }
-        return redis.hasKey(key(jwt.getId())).onErrorReturn(false);
+        return redis.hasKey(key(jwt.getId())).onErrorReturn(true);
     }
 
     /** Denies a token only until its natural expiry; no token material is stored. */

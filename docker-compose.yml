@@ -44,6 +44,7 @@ volumes:
   payment_pg_data:
   notification_pg_data:
   ticket_pg_data:
+  keycloak_pg_data:
   pgadmin_data:
 
 # -----------------------------------------------------------------------------
@@ -77,6 +78,9 @@ x-service-common: &service-common
     CONFIG_SERVER_URL: http://config-server:8888
     SPRING_ZIPKIN_BASE_URL: http://zipkin:9411
     JAVA_OPTS: "-Xms256m -Xmx512m"
+
+# Tek resmi Debezium registry/tag'i. Kafka Connect worker bu image'i kullanır.
+x-debezium-connect-image: &debezium-connect-image quay.io/debezium/connect:2.7.3.Final
 
 services:
 
@@ -143,21 +147,46 @@ services:
 
   # Debezium PostgreSQL connector eklentisini içeren Kafka Connect worker.
   # Servis bazlı connector tanımları EVT-05 kapsamında REST API ile yüklenecek.
-  kafka-connect:
-    image: debezium/connect:2.7.3.Final
-    container_name: telcox-kafka-connect
-    restart: unless-stopped
+  kafka-connect-topic-init:
+    image: confluentinc/cp-kafka:7.7.1
+    container_name: telcox-kafka-connect-topic-init
+    restart: "no"
     depends_on:
       kafka:
         condition: service_healthy
+    command:
+      - bash
+      - -ec
+      - |
+        # Önceki telcox_connect_* standardından geçiş: Connect state'i yeniden
+        # oluşturulur; connector tanımları infrastructure/debezium/connectors'tan yüklenir.
+        for topic in telcox_connect_configs telcox_connect_offsets telcox_connect_status; do
+          kafka-topics --bootstrap-server kafka:29092 --delete --if-exists --topic "$$topic"
+        done
+        while kafka-topics --bootstrap-server kafka:29092 --list | grep -Eq '^telcox_connect_(configs|offsets|status)$$'; do
+          sleep 2
+        done
+        for topic in telcox.connect.configs telcox.connect.offsets telcox.connect.statuses; do
+          kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic "$$topic" --partitions 1 --replication-factor 1 --config cleanup.policy=compact
+        done
+    networks:
+      - telcox-net
+
+  kafka-connect:
+    image: *debezium-connect-image
+    container_name: telcox-kafka-connect
+    restart: unless-stopped
+    depends_on:
+      kafka-connect-topic-init:
+        condition: service_completed_successfully
     ports:
       - "18084:8083"
     environment:
       BOOTSTRAP_SERVERS: kafka:29092
       GROUP_ID: telcox-debezium-connect
-      CONFIG_STORAGE_TOPIC: telcox_connect_configs
-      OFFSET_STORAGE_TOPIC: telcox_connect_offsets
-      STATUS_STORAGE_TOPIC: telcox_connect_status
+      CONFIG_STORAGE_TOPIC: telcox.connect.configs
+      OFFSET_STORAGE_TOPIC: telcox.connect.offsets
+      STATUS_STORAGE_TOPIC: telcox.connect.statuses
       CONFIG_STORAGE_REPLICATION_FACTOR: 1
       OFFSET_STORAGE_REPLICATION_FACTOR: 1
       STATUS_STORAGE_REPLICATION_FACTOR: 1
@@ -431,6 +460,57 @@ services:
       test: ["CMD-SHELL", "curl -sf http://localhost:8888/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
       <<: *healthcheck-spring
 
+  keycloak-postgres:
+    image: postgres:16-alpine
+    container_name: telcox-keycloak-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: ${KC_DB_USER:-keycloak}
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
+    ports:
+      - "15442:5432"
+    volumes:
+      - keycloak_pg_data:/var/lib/postgresql/data
+    networks:
+      - telcox-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KC_DB_USER:-keycloak} -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: telcox-keycloak
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/keycloak
+      KC_DB_USERNAME: ${KC_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "18083:8080"
+    volumes:
+      - ./infrastructure/keycloak/realm-export:/opt/keycloak/data/import:ro
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+    networks:
+      - telcox-net
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nhost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
   api-gateway:
     build:
       context: ./infrastructure/api-gateway
@@ -444,11 +524,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
     ports:
       - "18080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
       EUREKA_URL: http://discovery-server:8761/eureka/
+      KEYCLOAK_ISSUER_URI: http://localhost:18083/realms/telcox
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/telcox/protocol/openid-connect/certs
       CONFIG_SERVER_URL: http://config-server:8888
       REDIS_HOST: redis
