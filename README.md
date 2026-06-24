@@ -46,7 +46,7 @@ Her mikroservis **kendi PostgreSQL container'ına** sahiptir. Servisler arası r
 | MailHog Web | **18025** | 8025 |
 | pgAdmin | **15050** | 80 |
 
-> **Önemli:** Her mikroservis kendine ait **bağımsız bir PostgreSQL Docker container'ı** üzerinde çalışır. Container'lar tek bir Docker network (`telcox-net`) üzerinde haberleşir; servisler birbirinin DB'sine doğrudan erişemez, yalnızca **REST/Feign** veya **Kafka event'leri** ile haberleşir.
+> **Önemli:** Her mikroservis kendine ait **bağımsız bir PostgreSQL Docker container'ı** üzerinde çalışır. Container'lar tek bir Docker network (`telcox-net`) üzerinde haberleşir; servisler birbirinin DB'sine doğrudan erişemez, core akışlarda **Kafka event'leri** ve ihtiyaç halinde açıkça belgelenmiş query API'leri ile haberleşir.
 
 ### Multi-Module Maven Yapısı
 ```
@@ -78,7 +78,7 @@ telco-crm-platform/                  (parent POM — BOM ve modül listesi)
 |---|---|---|
 | Dil | Java | 21 (LTS) |
 | Framework | Spring Boot | 4.0.6 |
-| Spring Cloud | Gateway, Config, Eureka, OpenFeign | 2025.1.1 (Oakwood) |
+| Spring Cloud | Gateway, Config, Eureka | 2025.1.1 |
 | Build | Maven Multi-Module | 3.9+ |
 | Database | PostgreSQL | 16 (her servise ayrı container) |
 | Cache / Idempotency | Redis | 7 |
@@ -158,14 +158,14 @@ Bu adım `telco-common`'ı yerel Maven cache'e (`~/.m2/repository`) yazar ve 13 
 docker compose up -d --build
 ```
 
-Bu komut **28 container**'ı paralel ayağa kaldırır:
+Bu komut sistem container'larını paralel ayağa kaldırır:
 
 | Grup | Container'lar |
 |---|---|
 | **10 ayrı PostgreSQL** | `identity-postgres`, `customer-postgres`, `product-postgres`, `order-postgres`, `subscription-postgres`, `usage-postgres`, `billing-postgres`, `payment-postgres`, `notification-postgres`, `ticket-postgres` |
 | **3 altyapı servisi** | `discovery-server` (Eureka), `config-server`, `api-gateway` |
 | **10 iş mikroservisi** | `identity-service`, `customer-service`, `product-catalog-service`, `order-service`, `subscription-service`, `usage-service`, `billing-service`, `payment-service`, `notification-service`, `ticket-service` |
-| **Destek servisler** | `redis`, `kafka`, `kafka-ui`, `zipkin`, `mailhog`, `pgadmin` |
+| **Destek servisler** | `redis`, `kafka`, `kafka-connect`, `kafka-ui`, `zipkin`, `mailhog`, `pgadmin` |
 
 Her servis kendi PG container'ını `service_healthy` ile bekler; Kafka ve discovery-server hazır olmadan açılmaz.
 
@@ -242,11 +242,17 @@ mvn -pl services/identity-service spring-boot:run           # Terminal 4
 | Senaryo | Tip | Teknoloji |
 |---|---|---|
 | Gateway → Servis | Senkron | Spring Cloud Gateway + Eureka (`lb://`) |
-| Servis → Servis (data fetch) | Senkron | OpenFeign + Resilience4j |
+| Servis → Servis (query) | Senkron | Belgelenmiş query API + Resilience4j |
 | Servis → Servis (event) | Asenkron | Kafka + Outbox pattern |
 | CDR → Usage Service | Asenkron | Kafka |
 
 **Database-per-service** prensibi gereği bir mikroservis **başka bir servisin DB'sine doğrudan erişemez**. Veri ihtiyacı sadece API çağrısı veya event ile karşılanır.
+
+Mimari kararlar:
+
+- [ADR-0001: Spring Boot / Spring Cloud version baseline](docs/adr/ADR-0001-spring-boot-cloud-baseline.md)
+- [ADR-0002: Remove OpenFeign from core service communication](docs/adr/ADR-0002-remove-openfeign-from-core-service-communication.md)
+- [Event Backbone Standard](docs/event-backbone.md)
 
 ---
 
@@ -260,6 +266,13 @@ Her domain değişikliğiyle aynı transaction içinde `*_OUTBOX_EVENT` tablosun
 
 ### Idempotent Consumer
 Kafka'dan tüketilen her event'in `eventId`'si `*_PROCESSED_EVENT.event_id` UNIQUE constraint ile kontrol edilir; aynı event tekrar gelirse atlanır.
+
+### Event Envelope / Topic Standardi
+Kafka domain event'leri `telco-common` icindeki `EventEnvelope<T>` sozlesmesini kullanir. Zorunlu alanlar: `eventId`, `type`, `aggregateId`, `correlationId`, `schemaVersion`.
+
+Topic formati PR #4 Debezium connector ciktilariyla aynidir: `telcox.events.<aggregate_type>`.
+
+Retry ve DLQ formati: `<topic>.retry.0`, `<topic>.retry.1`, `<topic>.dlq`. Detaylar `docs/event-backbone.md` dosyasindadir.
 
 ### `telco-common` Değişikliği
 `telco-common` modülünde değişiklik yaptıktan sonra:
