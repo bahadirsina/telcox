@@ -45,6 +45,7 @@ zaman ilgili servisin PostgreSQL'idir.
 örn:  gateway:ratelimit:ip:1.2.3.4
       gateway:denylist:jti:<jti>
       customer:cache:profile:<customerId>
+      payment:idempotency:<sha256>
 ```
 
 Her servis **yalnızca kendi `<service>:` prefix'ine** yazar.
@@ -60,4 +61,6 @@ karşı disiplinli olmalı; PR review'da bu ADR'a referansla denetlenir.
 ## 4. Takip işleri
 
 - SEC-06 (token denylist) bu ADR'ın §2.1 sınırlarına uyacak.
+- CACHE-04 payment guard atomik `SET NX` + TTL kullanır; yalnızca başarısız
+  işlemlerde lease token'ı doğrulanarak key serbest bırakılır.
 - Cache eklenen her serviste TTL zorunluluğu code review checklist'ine girer.
