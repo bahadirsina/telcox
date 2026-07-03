@@ -1,1 +1,6 @@
 # Environment-specific settings are in application-{dev,prod,test}.yaml.
+telcox:
+  cache:
+    product-catalog:
+      tariff-ttl: ${PRODUCT_CATALOG_TARIFF_CACHE_TTL:10m}
+      list-ttl: ${PRODUCT_CATALOG_LIST_CACHE_TTL:5m}
