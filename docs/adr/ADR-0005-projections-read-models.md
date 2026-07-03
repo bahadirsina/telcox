@@ -23,7 +23,8 @@ Bu ADR, hangi servisin hangi event'ten hangi minimal read-model'i tutacağını 
   (örn. ad, durum, plan adı), tüm aggregate değil.
 - Projeksiyon **türetilmiştir**: source-of-truth kaynak serviste kalır; projeksiyon eventual
   consistent'tir ve stale olabilir.
-- Projeksiyon tablosu `<service>_<source>_projection` adıyla, kaynağın UUID'siyle anahtarlanır.
+- Projeksiyon tablosu `<consumer>_<source>_<purpose>_projection` adıyla,
+  kaynağın UUID'siyle anahtarlanır. Ayrıntılar `docs/projection-standard.md` içindedir.
 - Projeksiyonu besleyen consumer **idempotent**'tir (EVT-06, `*_PROCESSED_EVENT`).
 
 ## 3. Read-model haritası (db.sql logical ref'lerinden türetildi)
@@ -36,7 +37,7 @@ Bu ADR, hangi servisin hangi event'ten hangi minimal read-model'i tutacağını 
 | **billing-service** | customer (billing account için), subscription (fatura için) | customer, subscription | `CustomerRegistered`, `SubscriptionActivated/Changed` |
 | **payment-service** | customer, invoice projection (id, tutar, durum) | customer, billing | `CustomerRegistered`, `InvoiceIssued/Updated` |
 | **usage-service** | subscription projection (id, plan, kota) | subscription | `SubscriptionActivated/PlanChanged` |
-| **notification-service** | customer iletişim tercihi/profili | customer | `CustomerRegistered/Updated`, `ConsentChanged` |
+| **notification-service** | `notification_customer_preference_projection` | customer | `CustomerRegistered/Updated`, `ConsentChanged` |
 | **ticket-service** | customer projection, user (atanan/oluşturan) projection | customer, identity | `CustomerRegistered`, `UserRegistered/Updated` |
 
 > **identity-service.USER.id** referansı neredeyse her serviste geçiyor (actorUserId,
@@ -61,6 +62,6 @@ stratejisi gerekebilir; ilk yükleme (bootstrap) için event replay veya snapsho
 
 ## 6. Takip işleri
 
-- Her serviste projeksiyon tabloları için `V2__projections.sql` migration'ları (ayrı task).
+- Her serviste projection migration'ları `docs/projection-standard.md` kurallarını izler.
 - Bootstrap/replay stratejisi (EVT kapsamı).
 - inventory/campaign servisleşme kararı (ARCH).

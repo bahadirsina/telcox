@@ -1,1 +1,5 @@
 # Environment-specific settings are in application-{dev,prod,test}.yaml.
+telcox:
+  payment:
+    idempotency:
+      ttl: ${PAYMENT_IDEMPOTENCY_TTL:PT24H}

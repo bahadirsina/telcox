@@ -267,6 +267,19 @@ Her domain değişikliğiyle aynı transaction içinde `*_OUTBOX_EVENT` tablosun
 ### Idempotent Consumer
 Kafka'dan tüketilen her event'in `eventId`'si `*_PROCESSED_EVENT.event_id` UNIQUE constraint ile kontrol edilir; aynı event tekrar gelirse atlanır.
 
+### Projection Standardi
+Lokal read-model tablolari `<consumer>_<source>_<purpose>_projection` formatini
+kullanir. Migration, index ve event siralama kurallari
+[`docs/projection-standard.md`](docs/projection-standard.md) dosyasindadir.
+
+Notification Service customer iletisim tercihlerini
+`notification_customer_preference_projection` tablosunda tutar.
+
+### Payment Idempotency Guard
+Payment Service, ayni idempotency key ile eszamanli odeme islenmesini Redis
+uzerinde atomik `SET NX` ve TTL ile engeller. Redis key formati
+`payment:idempotency:<sha256>`; varsayilan TTL `PT24H`'dir.
+
 ### Event Envelope / Topic Standardi
 Kafka domain event'leri `telco-common` icindeki `EventEnvelope<T>` sozlesmesini kullanir. Zorunlu alanlar: `eventId`, `type`, `aggregateId`, `correlationId`, `schemaVersion`.
 
