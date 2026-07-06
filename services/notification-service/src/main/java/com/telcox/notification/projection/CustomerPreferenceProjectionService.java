@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +14,7 @@ public class CustomerPreferenceProjectionService {
     private final CustomerPreferenceProjectionRepository repository;
     private final Clock clock;
 
+    @Autowired
     public CustomerPreferenceProjectionService(CustomerPreferenceProjectionRepository repository) {
         this(repository, Clock.systemUTC());
     }
