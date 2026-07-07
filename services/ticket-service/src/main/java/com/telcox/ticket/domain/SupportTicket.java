@@ -46,6 +46,12 @@ public class SupportTicket {
     @Column(name = "assigned_agent_id")
     private UUID assignedAgentId;
 
+    @Column(name = "assigned_at")
+    private LocalDateTime assignedAt;
+
+    @Column(name = "sla_due_at")
+    private LocalDateTime slaDueAt;
+
     @Column(name = "correlation_id", nullable = false, length = 100)
     private String correlationId;
 
@@ -85,6 +91,13 @@ public class SupportTicket {
         updatedAt = LocalDateTime.now();
     }
 
+    public void assign(String assignedTeam, UUID assignedAgentId, LocalDateTime assignedAt, LocalDateTime slaDueAt) {
+        this.assignedTeam = assignedTeam;
+        this.assignedAgentId = assignedAgentId;
+        this.assignedAt = assignedAt;
+        this.slaDueAt = slaDueAt;
+    }
+
     public UUID getId() { return id; }
     public String getTicketNumber() { return ticketNumber; }
     public UUID getCustomerId() { return customerId; }
@@ -95,6 +108,8 @@ public class SupportTicket {
     public String getDescription() { return description; }
     public String getAssignedTeam() { return assignedTeam; }
     public UUID getAssignedAgentId() { return assignedAgentId; }
+    public LocalDateTime getAssignedAt() { return assignedAt; }
+    public LocalDateTime getSlaDueAt() { return slaDueAt; }
     public String getCorrelationId() { return correlationId; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

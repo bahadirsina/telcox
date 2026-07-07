@@ -23,11 +23,15 @@ class TicketServiceTest {
     private static final UUID CUSTOMER_ID = UUID.fromString("d551a6ef-7b77-4bb9-b6f8-f331aebf0f0d");
 
     private final SupportTicketRepository repository = mock(SupportTicketRepository.class);
-    private final TicketService service = new TicketService(repository);
+    private final SlaAssignmentService slaAssignmentService = mock(SlaAssignmentService.class);
+    private final TicketService service = new TicketService(repository, slaAssignmentService);
 
     @Test
     void createsOpenTicketWithCorrelationId() {
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(slaAssignmentService.assign(any())).thenReturn(new SlaAssignment("BILLING_SUPPORT", null,
+                java.time.LocalDateTime.parse("2026-07-08T09:00:00"),
+                java.time.LocalDateTime.parse("2026-07-08T17:00:00")));
 
         var response = service.create(new CreateTicketRequest(CUSTOMER_ID, "BILLING", TicketPriority.HIGH,
                 "Invoice issue", "Customer cannot see latest invoice"), "corr-ticket-1");
@@ -37,6 +41,8 @@ class TicketServiceTest {
         assertThat(response.priority()).isEqualTo(TicketPriority.HIGH);
         assertThat(response.ticketNumber()).startsWith("TCK-");
         assertThat(response.correlationId()).isEqualTo("corr-ticket-1");
+        assertThat(response.assignedTeam()).isEqualTo("BILLING_SUPPORT");
+        assertThat(response.slaDueAt()).isEqualTo(java.time.LocalDateTime.parse("2026-07-08T17:00:00"));
         verify(repository).save(any(SupportTicket.class));
     }
 

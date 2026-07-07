@@ -15,15 +15,20 @@ import org.springframework.transaction.annotation.Transactional;
 public class TicketService {
 
     private final SupportTicketRepository repository;
+    private final SlaAssignmentService slaAssignmentService;
 
-    public TicketService(SupportTicketRepository repository) {
+    public TicketService(SupportTicketRepository repository, SlaAssignmentService slaAssignmentService) {
         this.repository = repository;
+        this.slaAssignmentService = slaAssignmentService;
     }
 
     @Transactional
     public TicketResponse create(CreateTicketRequest request, String correlationId) {
         SupportTicket ticket = SupportTicket.open(request.customerId(), request.category(), request.priority(),
                 request.subject(), request.description(), normalizeCorrelationId(correlationId));
+        SlaAssignment assignment = slaAssignmentService.assign(ticket);
+        ticket.assign(assignment.assignedTeam(), assignment.assignedAgentId(), assignment.assignedAt(),
+                assignment.slaDueAt());
         return TicketResponse.from(repository.save(ticket));
     }
 

@@ -17,6 +17,8 @@ public record TicketResponse(
         String description,
         String assignedTeam,
         UUID assignedAgentId,
+        LocalDateTime assignedAt,
+        LocalDateTime slaDueAt,
         String correlationId,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
@@ -25,6 +27,7 @@ public record TicketResponse(
         return new TicketResponse(ticket.getId(), ticket.getTicketNumber(), ticket.getCustomerId(),
                 ticket.getCategory(), ticket.getPriority(), ticket.getStatus(), ticket.getSubject(),
                 ticket.getDescription(), ticket.getAssignedTeam(), ticket.getAssignedAgentId(),
-                ticket.getCorrelationId(), ticket.getCreatedAt(), ticket.getUpdatedAt());
+                ticket.getAssignedAt(), ticket.getSlaDueAt(), ticket.getCorrelationId(),
+                ticket.getCreatedAt(), ticket.getUpdatedAt());
     }
 }
