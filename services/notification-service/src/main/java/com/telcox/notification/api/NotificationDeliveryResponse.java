@@ -13,6 +13,7 @@ public record NotificationDeliveryResponse(
         String recipient,
         String subject,
         String content,
+        String templateCode,
         DeliveryStatus status,
         String failureReason,
         String correlationId,
@@ -22,7 +23,7 @@ public record NotificationDeliveryResponse(
     public static NotificationDeliveryResponse from(NotificationDelivery delivery) {
         return new NotificationDeliveryResponse(delivery.getId(), delivery.getCustomerId(),
                 delivery.getChannel(), delivery.getRecipient(), delivery.getSubject(), delivery.getContent(),
-                delivery.getStatus(), delivery.getFailureReason(), delivery.getCorrelationId(),
+                delivery.getTemplateCode(), delivery.getStatus(), delivery.getFailureReason(), delivery.getCorrelationId(),
                 delivery.getCreatedAt(), delivery.getSentAt());
     }
 }

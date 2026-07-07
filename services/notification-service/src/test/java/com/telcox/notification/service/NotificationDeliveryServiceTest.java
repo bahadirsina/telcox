@@ -39,6 +39,20 @@ class NotificationDeliveryServiceTest {
     }
 
     @Test
+    void keepsTemplateCodeWhenSendingRenderedNotification() {
+        when(sender.channel()).thenReturn(NotificationChannel.EMAIL);
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        NotificationDeliveryService service = new NotificationDeliveryService(repository, List.of(sender), clock);
+
+        var response = service.send(new RenderedNotification(null, "ticket.opened", NotificationChannel.EMAIL,
+                "customer@example.com", "Ticket opened", "Body"), "corr-template");
+
+        assertThat(response.status()).isEqualTo(DeliveryStatus.SENT);
+        assertThat(response.templateCode()).isEqualTo("ticket.opened");
+        verify(sender).send(any());
+    }
+
+    @Test
     void recordsFailureWithoutLosingDeliveryHistory() {
         when(sender.channel()).thenReturn(NotificationChannel.EMAIL);
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));

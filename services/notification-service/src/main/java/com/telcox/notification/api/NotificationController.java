@@ -1,6 +1,7 @@
 package com.telcox.notification.api;
 
 import com.telcox.notification.service.NotificationDeliveryService;
+import com.telcox.notification.service.NotificationTemplateService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -19,9 +20,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class NotificationController {
 
     private final NotificationDeliveryService deliveryService;
+    private final NotificationTemplateService templateService;
 
-    public NotificationController(NotificationDeliveryService deliveryService) {
+    public NotificationController(NotificationDeliveryService deliveryService,
+                                  NotificationTemplateService templateService) {
         this.deliveryService = deliveryService;
+        this.templateService = templateService;
     }
 
     @PostMapping
@@ -30,6 +34,14 @@ public class NotificationController {
             @Valid @RequestBody SendNotificationRequest request,
             @RequestHeader(value = "X-Correlation-Id", required = false) String correlationId) {
         return deliveryService.send(request, correlationId);
+    }
+
+    @PostMapping("/template")
+    @ResponseStatus(HttpStatus.CREATED)
+    public NotificationDeliveryResponse sendTemplate(
+            @Valid @RequestBody SendTemplatedNotificationRequest request,
+            @RequestHeader(value = "X-Correlation-Id", required = false) String correlationId) {
+        return deliveryService.send(templateService.render(request), correlationId);
     }
 
     @GetMapping

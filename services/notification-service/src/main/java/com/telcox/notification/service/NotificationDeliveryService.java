@@ -46,17 +46,30 @@ public class NotificationDeliveryService {
 
     @Transactional
     public NotificationDeliveryResponse send(SendNotificationRequest request, String correlationId) {
-        NotificationChannelSender sender = senders.get(request.channel());
+        return send(request.customerId(), request.channel(), request.recipient(), request.subject(),
+                request.content(), null, correlationId);
+    }
+
+    @Transactional
+    public NotificationDeliveryResponse send(RenderedNotification notification, String correlationId) {
+        return send(notification.customerId(), notification.channel(), notification.recipient(),
+                notification.subject(), notification.content(), notification.templateCode(), correlationId);
+    }
+
+    private NotificationDeliveryResponse send(UUID customerId, NotificationChannel channel, String recipient,
+                                              String subject, String content, String templateCode,
+                                              String correlationId) {
+        NotificationChannelSender sender = senders.get(channel);
         if (sender == null) {
-            throw new IllegalArgumentException("Unsupported notification channel: " + request.channel());
+            throw new IllegalArgumentException("Unsupported notification channel: " + channel);
         }
 
         OffsetDateTime now = OffsetDateTime.now(clock);
         NotificationDelivery delivery = repository.save(new NotificationDelivery(
-                request.customerId(), request.channel(), request.recipient(), request.subject(),
-                request.content(), normalizeCorrelationId(correlationId), now));
+                customerId, channel, recipient, subject, content, templateCode, normalizeCorrelationId(correlationId),
+                now));
         try {
-            sender.send(new NotificationMessage(request.recipient(), request.subject(), request.content()));
+            sender.send(new NotificationMessage(recipient, subject, content));
             delivery.markSent(OffsetDateTime.now(clock));
         } catch (RuntimeException exception) {
             delivery.markFailed(limitMessage(exception.getMessage()));

@@ -32,6 +32,9 @@ public class NotificationDelivery {
     @Column(nullable = false, columnDefinition = "text")
     private String content;
 
+    @Column(name = "template_code", length = 100)
+    private String templateCode;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private DeliveryStatus status;
@@ -54,12 +57,19 @@ public class NotificationDelivery {
     public NotificationDelivery(UUID customerId, NotificationChannel channel, String recipient,
                                 String subject, String content, String correlationId,
                                 OffsetDateTime createdAt) {
+        this(customerId, channel, recipient, subject, content, null, correlationId, createdAt);
+    }
+
+    public NotificationDelivery(UUID customerId, NotificationChannel channel, String recipient,
+                                String subject, String content, String templateCode, String correlationId,
+                                OffsetDateTime createdAt) {
         this.id = UUID.randomUUID();
         this.customerId = customerId;
         this.channel = channel;
         this.recipient = recipient;
         this.subject = subject;
         this.content = content;
+        this.templateCode = templateCode;
         this.correlationId = correlationId;
         this.status = DeliveryStatus.PENDING;
         this.createdAt = createdAt;
@@ -82,6 +92,7 @@ public class NotificationDelivery {
     public String getRecipient() { return recipient; }
     public String getSubject() { return subject; }
     public String getContent() { return content; }
+    public String getTemplateCode() { return templateCode; }
     public DeliveryStatus getStatus() { return status; }
     public String getFailureReason() { return failureReason; }
     public String getCorrelationId() { return correlationId; }
