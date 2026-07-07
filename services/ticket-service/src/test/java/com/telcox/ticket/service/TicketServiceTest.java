@@ -10,28 +10,32 @@ import static org.mockito.Mockito.when;
 import com.telcox.common.exception.BusinessException;
 import com.telcox.ticket.api.CreateTicketRequest;
 import com.telcox.ticket.domain.SupportTicket;
+import com.telcox.ticket.domain.TicketOutboxEvent;
 import com.telcox.ticket.domain.TicketPriority;
 import com.telcox.ticket.domain.TicketStatus;
 import com.telcox.ticket.repository.SupportTicketRepository;
+import com.telcox.ticket.repository.TicketOutboxEventRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 class TicketServiceTest {
 
     private static final UUID CUSTOMER_ID = UUID.fromString("d551a6ef-7b77-4bb9-b6f8-f331aebf0f0d");
 
     private final SupportTicketRepository repository = mock(SupportTicketRepository.class);
-    private final SlaAssignmentService slaAssignmentService = mock(SlaAssignmentService.class);
-    private final TicketService service = new TicketService(repository, slaAssignmentService);
+    private final TicketOutboxEventRepository outboxEventRepository = mock(TicketOutboxEventRepository.class);
+    private final SlaAssignmentService slaAssignmentService = new SlaAssignmentService(
+            Clock.fixed(Instant.parse("2026-07-08T09:00:00Z"), ZoneOffset.UTC));
+    private final TicketService service = new TicketService(repository, outboxEventRepository, slaAssignmentService);
 
     @Test
     void createsOpenTicketWithCorrelationId() {
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(slaAssignmentService.assign(any())).thenReturn(new SlaAssignment("BILLING_SUPPORT", null,
-                java.time.LocalDateTime.parse("2026-07-08T09:00:00"),
-                java.time.LocalDateTime.parse("2026-07-08T17:00:00")));
 
         var response = service.create(new CreateTicketRequest(CUSTOMER_ID, "BILLING", TicketPriority.HIGH,
                 "Invoice issue", "Customer cannot see latest invoice"), "corr-ticket-1");
@@ -44,6 +48,7 @@ class TicketServiceTest {
         assertThat(response.assignedTeam()).isEqualTo("BILLING_SUPPORT");
         assertThat(response.slaDueAt()).isEqualTo(java.time.LocalDateTime.parse("2026-07-08T17:00:00"));
         verify(repository).save(any(SupportTicket.class));
+        verify(outboxEventRepository).save(any(TicketOutboxEvent.class));
     }
 
     @Test

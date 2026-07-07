@@ -41,12 +41,16 @@ public class SlaAssignmentService {
     }
 
     private Duration resolveSla(TicketPriority priority) {
-        return switch (priority) {
-            case CRITICAL -> Duration.ofHours(4);
-            case HIGH -> Duration.ofHours(8);
-            case MEDIUM -> Duration.ofHours(24);
-            case LOW -> Duration.ofHours(72);
-        };
+        if (priority == TicketPriority.CRITICAL) {
+            return Duration.ofHours(4);
+        }
+        if (priority == TicketPriority.HIGH) {
+            return Duration.ofHours(8);
+        }
+        if (priority == TicketPriority.LOW) {
+            return Duration.ofHours(72);
+        }
+        return Duration.ofHours(24);
     }
 
     private String normalizeCategory(String category) {

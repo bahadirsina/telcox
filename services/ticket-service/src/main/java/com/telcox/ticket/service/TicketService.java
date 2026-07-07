@@ -5,8 +5,12 @@ import com.telcox.common.exception.ErrorCode;
 import com.telcox.ticket.api.CreateTicketRequest;
 import com.telcox.ticket.api.TicketResponse;
 import com.telcox.ticket.domain.SupportTicket;
+import com.telcox.ticket.domain.TicketOutboxEvent;
 import com.telcox.ticket.repository.SupportTicketRepository;
+import com.telcox.ticket.repository.TicketOutboxEventRepository;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,10 +19,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class TicketService {
 
     private final SupportTicketRepository repository;
+    private final TicketOutboxEventRepository outboxEventRepository;
     private final SlaAssignmentService slaAssignmentService;
 
-    public TicketService(SupportTicketRepository repository, SlaAssignmentService slaAssignmentService) {
+    public TicketService(SupportTicketRepository repository,
+                         TicketOutboxEventRepository outboxEventRepository,
+                         SlaAssignmentService slaAssignmentService) {
         this.repository = repository;
+        this.outboxEventRepository = outboxEventRepository;
         this.slaAssignmentService = slaAssignmentService;
     }
 
@@ -29,7 +37,9 @@ public class TicketService {
         SlaAssignment assignment = slaAssignmentService.assign(ticket);
         ticket.assign(assignment.assignedTeam(), assignment.assignedAgentId(), assignment.assignedAt(),
                 assignment.slaDueAt());
-        return TicketResponse.from(repository.save(ticket));
+        SupportTicket savedTicket = repository.save(ticket);
+        publishTicketOpened(savedTicket);
+        return TicketResponse.from(savedTicket);
     }
 
     @Transactional(readOnly = true)
@@ -52,5 +62,27 @@ public class TicketService {
 
     private String normalizeCorrelationId(String correlationId) {
         return correlationId == null || correlationId.isBlank() ? "ticket-" + UUID.randomUUID() : correlationId;
+    }
+
+    private void publishTicketOpened(SupportTicket ticket) {
+        outboxEventRepository.save(new TicketOutboxEvent(ticket.getId(), "TICKET", "ticket-opened",
+                Map.ofEntries(
+                        entry("ticketId", ticket.getId()),
+                        entry("ticketNumber", ticket.getTicketNumber()),
+                        entry("customerId", ticket.getCustomerId()),
+                        entry("category", ticket.getCategory()),
+                        entry("priority", ticket.getPriority().name()),
+                        entry("status", ticket.getStatus().name()),
+                        entry("subject", ticket.getSubject()),
+                        entry("assignedTeam", ticket.getAssignedTeam() == null ? "" : ticket.getAssignedTeam()),
+                        entry("slaDueAt", ticket.getSlaDueAt() == null ? "" : ticket.getSlaDueAt().toString()),
+                        entry("templateCode", "ticket.opened"),
+                        entry("correlationId", ticket.getCorrelationId())
+                ),
+                ticket.getCorrelationId()));
+    }
+
+    private Entry<String, Object> entry(String key, Object value) {
+        return Map.entry(key, value);
     }
 }
