@@ -6,6 +6,7 @@ import com.telcox.notification.channel.NotificationChannelSender;
 import com.telcox.notification.channel.NotificationMessage;
 import com.telcox.notification.domain.NotificationChannel;
 import com.telcox.notification.domain.NotificationDelivery;
+import com.telcox.notification.projection.CustomerPreferenceProjectionService;
 import com.telcox.notification.repository.NotificationDeliveryRepository;
 import java.time.Clock;
 import java.time.OffsetDateTime;
@@ -23,19 +24,23 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationDeliveryService {
 
     private final NotificationDeliveryRepository repository;
+    private final CustomerPreferenceProjectionService preferenceService;
     private final Map<NotificationChannel, NotificationChannelSender> senders;
     private final Clock clock;
 
     @Autowired
     public NotificationDeliveryService(NotificationDeliveryRepository repository,
-                                       List<NotificationChannelSender> senders) {
-        this(repository, senders, Clock.systemUTC());
+                                       List<NotificationChannelSender> senders,
+                                       CustomerPreferenceProjectionService preferenceService) {
+        this(repository, senders, preferenceService, Clock.systemUTC());
     }
 
     NotificationDeliveryService(NotificationDeliveryRepository repository,
                                 List<NotificationChannelSender> senders,
+                                CustomerPreferenceProjectionService preferenceService,
                                 Clock clock) {
         this.repository = repository;
+        this.preferenceService = preferenceService;
         this.senders = senders.stream().collect(Collectors.toMap(
                 NotificationChannelSender::channel,
                 Function.identity(),
@@ -68,6 +73,11 @@ public class NotificationDeliveryService {
         NotificationDelivery delivery = repository.save(new NotificationDelivery(
                 customerId, channel, recipient, subject, content, templateCode, normalizeCorrelationId(correlationId),
                 now));
+        if (!preferenceService.canSend(customerId, channel)) {
+            delivery.markFailed("Customer opted out from " + channel + " notifications");
+            return NotificationDeliveryResponse.from(repository.save(delivery));
+        }
+
         try {
             sender.send(new NotificationMessage(recipient, subject, content));
             delivery.markSent(OffsetDateTime.now(clock));
