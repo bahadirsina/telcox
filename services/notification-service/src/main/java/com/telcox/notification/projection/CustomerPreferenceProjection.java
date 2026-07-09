@@ -78,6 +78,22 @@ public class CustomerPreferenceProjection {
         return preferredChannel;
     }
 
+    public boolean isEmailEnabled() {
+        return emailEnabled;
+    }
+
+    public boolean isSmsEnabled() {
+        return smsEnabled;
+    }
+
+    public boolean isPushEnabled() {
+        return pushEnabled;
+    }
+
+    public boolean hasTransactionalConsent() {
+        return transactionalConsent;
+    }
+
     public UUID getLastEventId() {
         return lastEventId;
     }

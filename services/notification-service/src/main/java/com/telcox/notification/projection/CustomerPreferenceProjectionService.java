@@ -1,9 +1,12 @@
 package com.telcox.notification.projection;
 
+import com.telcox.notification.domain.NotificationChannel;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +16,7 @@ public class CustomerPreferenceProjectionService {
     private final CustomerPreferenceProjectionRepository repository;
     private final Clock clock;
 
+    @Autowired
     public CustomerPreferenceProjectionService(CustomerPreferenceProjectionRepository repository) {
         this(repository, Clock.systemUTC());
     }
@@ -46,5 +50,23 @@ public class CustomerPreferenceProjectionService {
         projection.apply(event, OffsetDateTime.now(clock));
         repository.save(projection);
         return true;
+    }
+
+    @Transactional(readOnly = true)
+    public boolean canSend(UUID customerId, NotificationChannel channel) {
+        if (customerId == null) {
+            return true;
+        }
+
+        return repository.findById(customerId)
+                .map(preference -> preference.hasTransactionalConsent() && channelAllowed(preference, channel))
+                .orElse(true);
+    }
+
+    private boolean channelAllowed(CustomerPreferenceProjection preference, NotificationChannel channel) {
+        return switch (channel) {
+            case EMAIL -> preference.isEmailEnabled();
+            case SMS -> preference.isSmsEnabled();
+        };
     }
 }

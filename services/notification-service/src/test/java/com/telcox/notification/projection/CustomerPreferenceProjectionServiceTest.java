@@ -6,6 +6,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.telcox.notification.domain.NotificationChannel;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -96,18 +97,54 @@ class CustomerPreferenceProjectionServiceTest {
         assertThat(projection.getPreferredChannel()).isEqualTo("SMS");
     }
 
+    @Test
+    void allowsDeliveryWhenPreferenceProjectionIsMissing() {
+        when(repository.findById(CUSTOMER_ID)).thenReturn(Optional.empty());
+
+        assertThat(service.canSend(CUSTOMER_ID, NotificationChannel.EMAIL)).isTrue();
+    }
+
+    @Test
+    void blocksDeliveryWhenChannelIsDisabled() {
+        CustomerPreferenceProjection projection = new CustomerPreferenceProjection(
+                event("2026-06-26T09:00:00Z", "SMS", true, false, true),
+                PROJECTED_AT
+        );
+        when(repository.findById(CUSTOMER_ID)).thenReturn(Optional.of(projection));
+
+        assertThat(service.canSend(CUSTOMER_ID, NotificationChannel.SMS)).isFalse();
+        assertThat(service.canSend(CUSTOMER_ID, NotificationChannel.EMAIL)).isTrue();
+    }
+
+    @Test
+    void blocksDeliveryWhenTransactionalConsentIsDisabled() {
+        CustomerPreferenceProjection projection = new CustomerPreferenceProjection(
+                event("2026-06-26T09:00:00Z", "EMAIL", true, true, false),
+                PROJECTED_AT
+        );
+        when(repository.findById(CUSTOMER_ID)).thenReturn(Optional.of(projection));
+
+        assertThat(service.canSend(CUSTOMER_ID, NotificationChannel.EMAIL)).isFalse();
+    }
+
     private static CustomerPreferenceChanged event(String sourceUpdatedAt, String channel) {
+        return event(sourceUpdatedAt, channel, true, true, true);
+    }
+
+    private static CustomerPreferenceChanged event(String sourceUpdatedAt, String channel,
+                                                   boolean emailEnabled, boolean smsEnabled,
+                                                   boolean transactionalConsent) {
         return new CustomerPreferenceChanged(
                 UUID.randomUUID(),
                 CUSTOMER_ID,
                 "customer@telcox.test",
                 "+905551112233",
                 channel,
-                true,
-                true,
+                emailEnabled,
+                smsEnabled,
                 true,
                 false,
-                true,
+                transactionalConsent,
                 OffsetDateTime.parse(sourceUpdatedAt)
         );
     }
