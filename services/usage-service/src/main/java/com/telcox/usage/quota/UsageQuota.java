@@ -23,6 +23,7 @@ public class UsageQuota {
     private QuotaType quotaType;
     private BigDecimal totalAllowance;
     private BigDecimal usedAmount;
+    private int lastThresholdPercent;
     private Instant periodStart;
     private Instant periodEnd;
     private Instant updatedAt;
@@ -36,6 +37,7 @@ public class UsageQuota {
         quota.quotaType = type;
         quota.totalAllowance = totalAllowance;
         quota.usedAmount = BigDecimal.ZERO;
+        quota.lastThresholdPercent = 0;
         quota.periodStart = periodStart;
         quota.periodEnd = periodEnd;
         quota.updatedAt = periodStart;
@@ -45,6 +47,18 @@ public class UsageQuota {
     public void consume(BigDecimal amount, Instant now) {
         usedAmount = usedAmount.add(amount);
         updatedAt = now;
+    }
+
+    public void markThresholdPublished(int thresholdPercent, Instant now) {
+        if (thresholdPercent <= lastThresholdPercent) {
+            return;
+        }
+        lastThresholdPercent = thresholdPercent;
+        updatedAt = now;
+    }
+
+    public BigDecimal overageAmount() {
+        return usedAmount.subtract(totalAllowance).max(BigDecimal.ZERO);
     }
 
     public enum QuotaType {

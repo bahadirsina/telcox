@@ -42,3 +42,23 @@ GET /api/v1/usage/subscriptions/{subscriptionId}/quotas?at={ISO-8601 instant}
 ```
 
 The response reports total, used, remaining and usage percentage for every active quota period.
+
+## USG-03 / FR-19
+
+Quota consumption emits threshold events through the usage outbox when usage crosses 80, 90 and
+100 percent. Each threshold is emitted once per quota period and tracked with
+`last_threshold_percent`.
+
+```text
+telcox.usage.quota-threshold-reached.v1
+```
+
+## USG-04 / FR-20
+
+When a CDR pushes a quota above its allowance, usage emits an overage aggregation event with the
+current total overage and the delta introduced by the latest CDR. These events share the same CDR
+transaction as quota consumption and processed-event registration.
+
+```text
+telcox.usage.quota-overage-aggregated.v1
+```

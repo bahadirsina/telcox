@@ -1,6 +1,7 @@
 package com.telcox.usage.cdr;
 
 import com.telcox.common.event.EventEnvelope;
+import com.telcox.usage.event.UsageQuotaEventPublisher;
 import com.telcox.usage.quota.UsageQuota;
 import com.telcox.usage.quota.UsageQuotaRepository;
 import java.math.BigDecimal;
@@ -17,20 +18,22 @@ public class CdrProcessingService {
     private final UsageRecordRepository records;
     private final ProcessedCdrEventRepository processedEvents;
     private final UsageQuotaRepository quotas;
+    private final UsageQuotaEventPublisher quotaEventPublisher;
     private final Clock clock;
 
     public CdrProcessingService(
             UsageRecordRepository records, ProcessedCdrEventRepository processedEvents,
-            UsageQuotaRepository quotas) {
-        this(records, processedEvents, quotas, Clock.systemUTC());
+            UsageQuotaRepository quotas, UsageQuotaEventPublisher quotaEventPublisher) {
+        this(records, processedEvents, quotas, quotaEventPublisher, Clock.systemUTC());
     }
 
     CdrProcessingService(
             UsageRecordRepository records, ProcessedCdrEventRepository processedEvents,
-            UsageQuotaRepository quotas, Clock clock) {
+            UsageQuotaRepository quotas, UsageQuotaEventPublisher quotaEventPublisher, Clock clock) {
         this.records = records;
         this.processedEvents = processedEvents;
         this.quotas = quotas;
+        this.quotaEventPublisher = quotaEventPublisher;
         this.clock = clock;
     }
 
@@ -49,7 +52,9 @@ public class CdrProcessingService {
                 .orElseThrow(() -> new IllegalStateException(
                         "Active quota not found for subscription " + event.subscriptionId()));
         Instant now = clock.instant();
+        BigDecimal previousUsedAmount = quota.getUsedAmount();
         quota.consume(consumption(event), now);
+        quotaEventPublisher.publishQuotaEvents(quota, previousUsedAmount, envelope.correlationId(), now);
         records.save(UsageRecord.from(event, now));
         processedEvents.save(ProcessedCdrEvent.success(envelope.eventId(), event, now));
         return true;

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.telcox.common.event.EventEnvelope;
+import com.telcox.usage.event.UsageQuotaEventPublisher;
 import com.telcox.usage.quota.UsageQuota;
 import com.telcox.usage.quota.UsageQuotaRepository;
 import java.math.BigDecimal;
@@ -24,9 +25,10 @@ class CdrProcessingServiceTest {
     private final UsageRecordRepository records = Mockito.mock(UsageRecordRepository.class);
     private final ProcessedCdrEventRepository processed = Mockito.mock(ProcessedCdrEventRepository.class);
     private final UsageQuotaRepository quotas = Mockito.mock(UsageQuotaRepository.class);
+    private final UsageQuotaEventPublisher quotaEventPublisher = Mockito.mock(UsageQuotaEventPublisher.class);
     private final Instant now = Instant.parse("2026-07-06T10:00:00Z");
     private final CdrProcessingService service =
-            new CdrProcessingService(records, processed, quotas, Clock.fixed(now, ZoneOffset.UTC));
+            new CdrProcessingService(records, processed, quotas, quotaEventPublisher, Clock.fixed(now, ZoneOffset.UTC));
 
     @Test
     void ignoresAlreadyProcessedEvent() {
@@ -34,6 +36,7 @@ class CdrProcessingServiceTest {
         when(processed.existsByEventId(envelope.eventId())).thenReturn(true);
         assertThat(service.process(envelope)).isFalse();
         verify(records, never()).save(any());
+        verify(quotaEventPublisher, never()).publishQuotaEvents(any(), any(), any(), any());
     }
 
     @Test
@@ -47,6 +50,7 @@ class CdrProcessingServiceTest {
 
         assertThat(service.process(envelope)).isTrue();
         assertThat(quota.getUsedAmount()).isEqualByComparingTo("2.0000");
+        verify(quotaEventPublisher).publishQuotaEvents(quota, BigDecimal.ZERO, envelope.correlationId(), now);
         verify(records).save(any(UsageRecord.class));
         verify(processed).save(any(ProcessedCdrEvent.class));
     }
