@@ -1,1 +1,4 @@
 # Environment-specific settings are in application-{dev,prod,test}.yaml.
+telcox:
+  usage:
+    cdr-topic: telcox.cdr.cdr-recorded.v1

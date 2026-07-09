@@ -52,6 +52,8 @@ telcox.order.order-confirmed.v1
 telcox.subscription.subscription-activated.v1
 telcox.billing.invoice-issued.v1
 telcox.payment.payment-captured.v1
+telcox.usage.quota-threshold-reached.v1
+telcox.usage.quota-overage-aggregated.v1
 ```
 
 The `<context>` segment is the service or bounded-context prefix configured in

@@ -3,3 +3,6 @@ telcox:
   payment:
     idempotency:
       ttl: ${PAYMENT_IDEMPOTENCY_TTL:PT24H}
+    retry:
+      batch-size: 100
+      poll-delay: 60000
