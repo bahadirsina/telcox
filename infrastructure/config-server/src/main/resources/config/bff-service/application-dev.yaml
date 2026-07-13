@@ -1,0 +1,25 @@
+telcox.profile: dev
+telcox:
+  bff:
+    upstream:
+      identity-service: ${IDENTITY_SERVICE_URL:http://localhost:19001}
+      customer-service: ${CUSTOMER_SERVICE_URL:http://localhost:19002}
+      product-catalog-service: ${PRODUCT_CATALOG_SERVICE_URL:http://localhost:19003}
+      order-service: ${ORDER_SERVICE_URL:http://localhost:19004}
+      subscription-service: ${SUBSCRIPTION_SERVICE_URL:http://localhost:19005}
+      usage-service: ${USAGE_SERVICE_URL:http://localhost:19006}
+      billing-service: ${BILLING_SERVICE_URL:http://localhost:19007}
+      payment-service: ${PAYMENT_SERVICE_URL:http://localhost:19008}
+      notification-service: ${NOTIFICATION_SERVICE_URL:http://localhost:19009}
+      ticket-service: ${TICKET_SERVICE_URL:http://localhost:19010}
+
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:16379}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:18761/eureka/
