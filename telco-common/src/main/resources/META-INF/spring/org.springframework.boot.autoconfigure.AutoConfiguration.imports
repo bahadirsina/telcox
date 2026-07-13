@@ -1,1 +1,2 @@
 com.telcox.common.autoconfigure.TelcoCommonAutoConfiguration
+com.telcox.common.observability.CorrelationIdMdcAutoConfiguration

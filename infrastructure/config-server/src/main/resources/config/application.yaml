@@ -32,6 +32,32 @@ management:
       show-details: always
       probes:
         enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      environment: ${telcox.environment:local}
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
+    baggage:
+      remote-fields: correlationId
+      correlation:
+        fields: correlationId
+    export:
+      zipkin:
+        endpoint: ${ZIPKIN_TRACING_ENDPOINT:http://localhost:19411/api/v2/spans}
+        connect-timeout: 2s
+        read-timeout: 5s
+logging:
+  include-application-name: false
+  pattern:
+    correlation: "[${spring.application.name:},%X{traceId:-},%X{spanId:-},%X{correlationId:-}] "
+  structured:
+    format:
+      console: ${LOGGING_STRUCTURED_FORMAT:ecs}
+    ecs:
+      service:
+        environment: ${telcox.environment:local}
 springdoc:
   api-docs:
     enabled: true
