@@ -20,6 +20,7 @@ Her mikroservis **kendi PostgreSQL container'ına** sahiptir. Servisler arası r
 | `api-gateway` | 8080 | — | — | **18080** | — |
 | `discovery-server` (Eureka) | 8761 | — | — | **18761** | — |
 | `config-server` | 8888 | — | — | **18888** | — |
+| `bff-service` | 9011 | — | — | **19011** | — |
 | `identity-service` | 9001 | `identity-postgres` | **15432** | **19001** | `identity_db` |
 | `customer-service` | 9002 | `customer-postgres` | **15433** | **19002** | `customer_db` |
 | `product-catalog-service` | 9003 | `product-postgres` | **15434** | **19003** | `product_db` |
@@ -58,6 +59,7 @@ telco-crm-platform/                  (parent POM — BOM ve modül listesi)
 │   ├── config-server/               (Spring Cloud Config - native, classpath)
 │   └── api-gateway/                 (Spring Cloud Gateway)
 └── services/
+    ├── bff-service/                 (Frontend aggregation ve operation status API)
     ├── identity-service/            (her servis kendi Dockerfile'ı ile)
     ├── customer-service/
     ├── product-catalog-service/
@@ -111,6 +113,17 @@ varsayılan olarak güvenli demo modunda çalışır. Gateway route sözleşmele
 VITE_ENABLE_LIVE_API=true
 ```
 
+BFF endpoint sözleşmeleri `bff-service` altında canlıdır:
+
+| Endpoint | Açıklama |
+|---|---|
+| `GET /api/v1/bff/me` | Gateway'den gelen doğrulanmış kullanıcı/rol bağlamı |
+| `GET /api/v1/bff/dashboard/summary` | Redis kısa TTL cache'li dashboard özeti |
+| `GET /api/v1/bff/customers/{customerId}/360` | Customer 360 aggregation; rol bazlı billing/ticket shaping |
+| `POST /api/v1/bff/orders/onboarding` | Yeni order command submit; operation id döner |
+| `GET /api/v1/bff/operations/{operationId}` | Polling ile saga/operation status |
+| `GET /api/v1/bff/operations/{operationId}/events` | SSE ile long-running saga status |
+
 Lokal frontend geliştirme:
 
 ```bash
@@ -150,7 +163,7 @@ cd telco-crm-platform
 mvn clean package -DskipTests
 ```
 
-Bu adım `telco-common`'ı yerel Maven cache'e (`~/.m2/repository`) yazar ve 13 servis için `target/*.jar` üretir. Dockerfile'lar bu jar'ları kullanır.
+Bu adım `telco-common`'ı yerel Maven cache'e (`~/.m2/repository`) yazar ve 14 servis için `target/*.jar` üretir. Dockerfile'lar bu jar'ları kullanır.
 
 ### 2. Tüm Sistemi Ayağa Kaldır
 
@@ -164,7 +177,7 @@ Bu komut sistem container'larını paralel ayağa kaldırır:
 |---|---|
 | **10 ayrı PostgreSQL** | `identity-postgres`, `customer-postgres`, `product-postgres`, `order-postgres`, `subscription-postgres`, `usage-postgres`, `billing-postgres`, `payment-postgres`, `notification-postgres`, `ticket-postgres` |
 | **3 altyapı servisi** | `discovery-server` (Eureka), `config-server`, `api-gateway` |
-| **10 iş mikroservisi** | `identity-service`, `customer-service`, `product-catalog-service`, `order-service`, `subscription-service`, `usage-service`, `billing-service`, `payment-service`, `notification-service`, `ticket-service` |
+| **11 iş/BFF servisi** | `bff-service`, `identity-service`, `customer-service`, `product-catalog-service`, `order-service`, `subscription-service`, `usage-service`, `billing-service`, `payment-service`, `notification-service`, `ticket-service` |
 | **Destek servisler** | `redis`, `kafka`, `kafka-connect`, `kafka-ui`, `keycloak`, `keycloak-postgres`, `zipkin`, `mailhog`, `pgadmin` |
 
 Her servis kendi PG container'ını `service_healthy` ile bekler; Kafka ve discovery-server hazır olmadan açılmaz.
@@ -183,6 +196,7 @@ docker compose logs --tail=50 -f            # tum sistem (uzun olur)
 |---|---|
 | Eureka dashboard | http://localhost:18761 |
 | API Gateway routes | http://localhost:18080/actuator/gateway/routes |
+| BFF health | http://localhost:19011/actuator/health |
 | Identity Swagger | http://localhost:19001/swagger-ui.html |
 | Kafka UI | http://localhost:18090 |
 | Kafka Connect REST API | http://localhost:18084/connectors |

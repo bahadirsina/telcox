@@ -26,7 +26,7 @@ name: telcox
 #   16379=redis, 19092=kafka, 18090=kafka-ui, 18084=kafka-connect, 19411=zipkin,
 #   11025=mailhog-smtp, 18025=mailhog-web, 15050=pgadmin,
 #   18761=eureka, 18888=config-server, 18080=api-gateway,
-#   19001..19010 = is mikroservisleri
+#   19001..19011 = is mikroservisleri ve BFF
 # =============================================================================
 
 networks:
@@ -541,6 +541,36 @@ services:
       - telcox-net
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      <<: *healthcheck-spring
+
+  bff-service:
+    <<: *service-common
+    build:
+      context: ./services/bff-service
+    image: telcox/bff-service:1.0.0-SNAPSHOT
+    container_name: telcox-bff-service
+    depends_on:
+      redis:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      subscription-service:
+        condition: service_healthy
+    ports:
+      - "19011:9011"
+    environment:
+      <<: *service-common-env
+      CUSTOMER_SERVICE_URL: http://customer-service:9002
+      ORDER_SERVICE_URL: http://order-service:9004
+      SUBSCRIPTION_SERVICE_URL: http://subscription-service:9005
+      BILLING_SERVICE_URL: http://billing-service:9007
+      TICKET_SERVICE_URL: http://ticket-service:9010
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9011/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
       <<: *healthcheck-spring
 
   # ===========================================================================

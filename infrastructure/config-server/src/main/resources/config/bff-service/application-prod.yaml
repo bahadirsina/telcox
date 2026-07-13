@@ -1,0 +1,25 @@
+telcox.profile: prod
+telcox:
+  bff:
+    upstream:
+      identity-service: ${IDENTITY_SERVICE_URL:http://identity-service:9001}
+      customer-service: ${CUSTOMER_SERVICE_URL:http://customer-service:9002}
+      product-catalog-service: ${PRODUCT_CATALOG_SERVICE_URL:http://product-catalog-service:9003}
+      order-service: ${ORDER_SERVICE_URL:http://order-service:9004}
+      subscription-service: ${SUBSCRIPTION_SERVICE_URL:http://subscription-service:9005}
+      usage-service: ${USAGE_SERVICE_URL:http://usage-service:9006}
+      billing-service: ${BILLING_SERVICE_URL:http://billing-service:9007}
+      payment-service: ${PAYMENT_SERVICE_URL:http://payment-service:9008}
+      notification-service: ${NOTIFICATION_SERVICE_URL:http://notification-service:9009}
+      ticket-service: ${TICKET_SERVICE_URL:http://ticket-service:9010}
+
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL}
