@@ -60,6 +60,12 @@ kubectl apply -k k8s/local
 kubectl -n telcox-local get pods
 ```
 
+Script ile build + image load + apply:
+
+```powershell
+scripts/local-k8s-deploy.sh
+```
+
 ## Local erişim
 
 Gateway için port-forward:
