@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bff-service
+  namespace: telcox-local
+  labels:
+    app: bff-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bff-service
+  template:
+    metadata:
+      labels:
+        app: bff-service
+    spec:
+      containers:
+        - name: bff-service
+          image: telcox/bff-service:1.0.0-SNAPSHOT
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9011
+          envFrom:
+            - configMapRef:
+                name: telcox-common-config
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms256m -Xmx512m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 9011
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 9011
+            initialDelaySeconds: 90
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bff-service
+  namespace: telcox-local
+  labels:
+    app: bff-service
+spec:
+  type: ClusterIP
+  selector:
+    app: bff-service
+  ports:
+    - name: http
+      port: 9011
+      targetPort: 9011

@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: telcox-common-config
+  namespace: telcox-local
+  labels:
+    app.kubernetes.io/name: telcox-common-config
+    app.kubernetes.io/part-of: telcox-platform
+data:
+  SPRING_PROFILES_ACTIVE: "prod"
+  CONFIG_SERVER_URL: "http://config-server:8888"
+  EUREKA_URL: "http://discovery-server:8761/eureka/"
+  KAFKA_BOOTSTRAP: "kafka:29092"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  SPRING_ZIPKIN_BASE_URL: "http://zipkin:9411"
+  KEYCLOAK_ISSUER_URI: "http://localhost:18083/realms/telcox"
+  KEYCLOAK_JWK_SET_URI: "http://keycloak:8080/realms/telcox/protocol/openid-connect/certs"
+  CUSTOMER_SERVICE_URL: "http://customer-service:9002"
+  ORDER_SERVICE_URL: "http://order-service:9004"
+  SUBSCRIPTION_SERVICE_URL: "http://subscription-service:9005"
+  BILLING_SERVICE_URL: "http://billing-service:9007"
+  TICKET_SERVICE_URL: "http://ticket-service:9010"
+  BFF_DASHBOARD_CACHE_TTL: "45s"

@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server
+  namespace: telcox-local
+  labels:
+    app: config-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: config-server
+  template:
+    metadata:
+      labels:
+        app: config-server
+    spec:
+      containers:
+        - name: config-server
+          image: telcox/config-server:1.0.0-SNAPSHOT
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8888
+          envFrom:
+            - configMapRef:
+                name: telcox-common-config
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms256m -Xmx384m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8888
+            initialDelaySeconds: 40
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8888
+            initialDelaySeconds: 70
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-server
+  namespace: telcox-local
+  labels:
+    app: config-server
+spec:
+  selector:
+    app: config-server
+  ports:
+    - name: http
+      port: 8888
+      targetPort: 8888
