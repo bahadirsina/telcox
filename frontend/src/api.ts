@@ -6,6 +6,7 @@ export const integration = {
 
 export type ServiceKey =
   | "identity"
+  | "bff"
   | "customers"
   | "products"
   | "orders"
@@ -18,6 +19,7 @@ export type ServiceKey =
 
 export const serviceRoutes: Record<ServiceKey, string> = {
   identity: "/auth",
+  bff: "/bff",
   customers: "/customers",
   products: "/products",
   orders: "/orders",
