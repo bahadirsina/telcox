@@ -3,6 +3,7 @@ package com.telcox.payment.processing;
 import com.telcox.payment.retry.PaymentRetryExecutor;
 import java.time.Clock;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +13,7 @@ public class PaymentRetryPaymentExecutor implements PaymentRetryExecutor {
     private final MockCreditCardGateway gateway;
     private final Clock clock;
 
+    @Autowired
     public PaymentRetryPaymentExecutor(PaymentRepository payments, MockCreditCardGateway gateway) {
         this(payments, gateway, Clock.systemUTC());
     }

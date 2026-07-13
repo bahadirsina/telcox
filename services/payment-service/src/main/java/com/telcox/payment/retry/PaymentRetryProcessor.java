@@ -2,6 +2,7 @@ package com.telcox.payment.retry;
 
 import java.time.Clock;
 import java.time.Instant;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +13,7 @@ public class PaymentRetryProcessor {
     private final PaymentRetryExecutor executor;
     private final Clock clock;
 
+    @Autowired
     public PaymentRetryProcessor(PaymentRetryScheduleRepository schedules, PaymentRetryExecutor executor) {
         this(schedules, executor, Clock.systemUTC());
     }

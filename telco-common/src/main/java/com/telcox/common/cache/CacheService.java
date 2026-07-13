@@ -2,13 +2,11 @@ package com.telcox.common.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-@Component
 public class CacheService {
 
     private final StringRedisTemplate redisTemplate;

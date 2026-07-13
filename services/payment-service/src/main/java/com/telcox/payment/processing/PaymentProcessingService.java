@@ -4,6 +4,7 @@ import com.telcox.payment.idempotency.PaymentIdempotencyGuard;
 import com.telcox.payment.retry.PaymentRetryScheduler;
 import java.time.Clock;
 import java.time.Instant;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,6 +18,7 @@ public class PaymentProcessingService {
     private final PaymentRetryScheduler retryScheduler;
     private final Clock clock;
 
+    @Autowired
     public PaymentProcessingService(
             PaymentRepository payments,
             PaymentIdempotencyGuard idempotencyGuard,

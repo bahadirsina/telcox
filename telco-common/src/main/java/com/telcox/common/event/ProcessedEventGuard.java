@@ -2,14 +2,12 @@ package com.telcox.common.event;
 
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
 
 /** docs/idempotent-consumer-standard.md standardinin ortak implementasyonu. */
-@Component
 public class ProcessedEventGuard {
 
     private final JdbcTemplate jdbcTemplate;

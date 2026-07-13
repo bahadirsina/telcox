@@ -2,12 +2,15 @@ package com.telcox.usage.event;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Column;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "usage_service_outbox_event")
@@ -18,6 +21,8 @@ public class UsageOutboxEvent {
     private UUID aggregateId;
     private String aggregateType;
     private String eventType;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "payload_json", nullable = false, columnDefinition = "jsonb")
     private String payloadJson;
     private String status;
     private Instant createdAt;
