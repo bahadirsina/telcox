@@ -60,4 +60,24 @@ public class OrderOutboxEvent {
         this.correlationId = correlationId;
         this.schemaVersion = 1;
     }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public UUID getAggregateId() {
+        return aggregateId;
+    }
+
+    public String getEventType() {
+        return eventType;
+    }
+
+    public Map<String, Object> getPayloadJson() {
+        return payloadJson;
+    }
+
+    public String getCorrelationId() {
+        return correlationId;
+    }
 }

@@ -24,7 +24,7 @@ name: telcox
 #
 # Diger host portlari:
 #   16379=redis, 19092=kafka, 18090=kafka-ui, 18084=kafka-connect, 19411=zipkin,
-#   11025=mailhog-smtp, 18025=mailhog-web, 15050=pgadmin,
+#   19090=prometheus, 13000=grafana, 11025=mailhog-smtp, 18025=mailhog-web, 15050=pgadmin,
 #   18761=eureka, 18888=config-server, 18080=api-gateway,
 #   19001..19011 = is mikroservisleri ve BFF
 # =============================================================================
@@ -46,6 +46,8 @@ volumes:
   ticket_pg_data:
   keycloak_pg_data:
   pgadmin_data:
+  prometheus_data:
+  grafana_data:
 
 # -----------------------------------------------------------------------------
 # Tekrar eden alanlar icin YAML anchor'lari
@@ -77,6 +79,9 @@ x-service-common: &service-common
     EUREKA_URL: http://discovery-server:8761/eureka/
     CONFIG_SERVER_URL: http://config-server:8888
     SPRING_ZIPKIN_BASE_URL: http://zipkin:9411
+    ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+    TRACING_SAMPLING_PROBABILITY: 1.0
+    LOGGING_STRUCTURED_FORMAT: ecs
     JAVA_OPTS: "-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m"
 
 # Tek resmi Debezium registry/tag'i. Kafka Connect worker bu image'i kullanır.
@@ -209,6 +214,41 @@ services:
     restart: unless-stopped
     ports:
       - "19411:9411"
+    networks:
+      - telcox-net
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: telcox-prometheus
+    restart: unless-stopped
+    depends_on:
+      zipkin:
+        condition: service_started
+    ports:
+      - "19090:9090"
+    volumes:
+      - ./docker/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - telcox-net
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: telcox-grafana
+    restart: unless-stopped
+    depends_on:
+      prometheus:
+        condition: service_started
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "13000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
     networks:
       - telcox-net
 

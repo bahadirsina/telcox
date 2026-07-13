@@ -21,3 +21,18 @@ management:
     web:
       exposure:
         include: health,info,metrics,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      environment: ${telcox.environment:local}
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
+    export:
+      zipkin:
+        endpoint: ${ZIPKIN_TRACING_ENDPOINT:http://localhost:19411/api/v2/spans}
+logging:
+  include-application-name: false
+  structured:
+    format:
+      console: ${LOGGING_STRUCTURED_FORMAT:ecs}

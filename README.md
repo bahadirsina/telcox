@@ -43,6 +43,8 @@ Her mikroservis **kendi PostgreSQL container'ına** sahiptir. Servisler arası r
 | Keycloak | **18083** | 8080 |
 | Keycloak PostgreSQL | **15442** | 5432 |
 | Zipkin | **19411** | 9411 |
+| Prometheus | **19090** | 9090 |
+| Grafana | **13000** | 3000 |
 | MailHog SMTP | **11025** | 1025 |
 | MailHog Web | **18025** | 8025 |
 | pgAdmin | **15050** | 80 |
@@ -95,6 +97,20 @@ telco-crm-platform/                  (parent POM — BOM ve modül listesi)
 | Test | JUnit 5, Mockito, Testcontainers | 1.20.4 |
 | Container | Docker + Docker Compose v2 | — |
 | Operasyon UI | React + TypeScript + Vite | Signal Atlas |
+
+---
+
+## Observability
+
+Tüm Spring Boot servislerinde actuator Prometheus endpoint’i, OpenTelemetry tabanlı Micrometer tracing ve Zipkin export yapılandırıldı. Compose ortamında:
+
+| Yüzey | Adres |
+|---|---|
+| Zipkin traces | http://localhost:19411 |
+| Prometheus | http://localhost:19090 |
+| Grafana | http://localhost:13000 (admin / admin) |
+
+Loglar varsayılan olarak ECS JSON formatındadır. `X-Correlation-Id` header’ı servislerde MDC alanına taşınır ve response header olarak geri döner; trace export endpoint’i `ZIPKIN_TRACING_ENDPOINT`, örnekleme oranı `TRACING_SAMPLING_PROBABILITY` ile yönetilir.
 
 ---
 
@@ -154,7 +170,7 @@ npm run build
 - JDK 21
 - Maven 3.9+
 - Docker Desktop (veya Docker Engine + Compose v2)
-- Host portları **15432-15441** (PG), **16379** (Redis), **19092** (Kafka), **18090** (Kafka UI), **18084** (Kafka Connect), **19411** (Zipkin), **11025/18025** (MailHog), **15050** (pgAdmin), **18761** (Eureka), **18888** (Config), **18080** (Gateway), **19001-19010** (servisler) boş olmalı
+- Host portları **15432-15441** (PG), **16379** (Redis), **19092** (Kafka), **18090** (Kafka UI), **18084** (Kafka Connect), **19411** (Zipkin), **19090** (Prometheus), **13000** (Grafana), **11025/18025** (MailHog), **15050** (pgAdmin), **18761** (Eureka), **18888** (Config), **18080** (Gateway), **19001-19010** (servisler) boş olmalı
 
 ### 1. JAR'ları Üret
 
@@ -201,6 +217,8 @@ docker compose logs --tail=50 -f            # tum sistem (uzun olur)
 | Kafka UI | http://localhost:18090 |
 | Kafka Connect REST API | http://localhost:18084/connectors |
 | Zipkin | http://localhost:19411 |
+| Prometheus | http://localhost:19090 |
+| Grafana | http://localhost:13000 |
 | MailHog (SMTP UI) | http://localhost:18025 |
 | pgAdmin | http://localhost:15050 (admin@telcox.com / admin) |
 
@@ -211,6 +229,32 @@ pgAdmin açılınca **10 PostgreSQL sunucusu** "Telcox CRM" grubunda otomatik ta
 ```bash
 docker compose down                # container'lari durdurur (veriler kalir)
 docker compose down -v             # +veri volume'lerini de siler (temiz baslangic)
+```
+
+---
+
+## CI, Sonar ve Local Kubernetes
+
+GitHub Actions workflow’u `.github/workflows/ci.yml` altında:
+
+- Maven `verify`
+- Frontend `npm ci && npm run build`
+- `k8s/local` kustomize render kontrolü
+- Push event’lerinde GHCR Docker image build/push
+- `SONAR_TOKEN` tanımlıysa Sonar analizi
+
+Sonar için varsayılan proje anahtarı `tamerakdeniz_telcox`; farklı Sonar instance gerekiyorsa repository variable olarak `SONAR_HOST_URL`, secret olarak `SONAR_TOKEN` tanımlanır.
+
+Local Kind/Minikube deploy:
+
+```bash
+scripts/local-k8s-deploy.sh
+```
+
+Build atlanacaksa:
+
+```bash
+SKIP_BUILD=true scripts/local-k8s-deploy.sh
 ```
 
 ---
