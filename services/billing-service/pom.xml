@@ -36,6 +36,11 @@
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
         <dependency><groupId>org.testcontainers</groupId><artifactId>postgresql</artifactId><scope>test</scope></dependency>
         <dependency><groupId>org.testcontainers</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
+
+        <!-- BILL-03 / FR-23: fatura PDF uretimi icin. Repoda baska hicbir serviste
+             PDF kutuphanesi yoktu, bu yuzden versiyon telco-common'daki parent
+             dependencyManagement'a degil, dogrudan burada sabitlendi. -->
+        <dependency><groupId>org.apache.pdfbox</groupId><artifactId>pdfbox</artifactId><version>3.0.3</version></dependency>
     </dependencies>
 
     <build>
