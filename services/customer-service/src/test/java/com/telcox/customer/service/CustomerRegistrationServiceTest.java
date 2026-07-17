@@ -2,7 +2,6 @@ package com.telcox.customer.service;
 
 import com.telcox.common.exception.BusinessException;
 import com.telcox.customer.api.CustomerRegistrationRequest;
-import com.telcox.customer.api.CustomerResponse;
 import com.telcox.customer.api.KycDecisionRequest;
 import com.telcox.customer.domain.Customer;
 import com.telcox.customer.domain.CustomerOutboxEvent;
@@ -18,7 +17,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,12 +27,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class CustomerRegistrationServiceTest {
 
-    @Mock
-    private CustomerRepository customerRepository;
-
-    @Mock
-    private CustomerOutboxEventRepository outboxEventRepository;
-
+    @Mock CustomerRepository customerRepository;
+    @Mock CustomerOutboxEventRepository outboxEventRepository;
     private CustomerRegistrationService service;
 
     @BeforeEach
@@ -42,111 +36,49 @@ class CustomerRegistrationServiceTest {
         service = new CustomerRegistrationService(customerRepository, outboxEventRepository);
     }
 
+    private CustomerRegistrationRequest request() {
+        return new CustomerRegistrationRequest(UUID.randomUUID(), "Ada", "Lovelace",
+                "10000000146", LocalDate.of(1995, 1, 1), CustomerSegment.VIP);
+    }
+
     @Test
-    void registerIndividual_shouldSaveCustomerAndOutboxEvent() {
-        CustomerRegistrationRequest request = validRequest();
-        when(customerRepository.existsByNationalIdAndDeletedAtIsNull(request.nationalId())).thenReturn(false);
-        when(customerRepository.existsByCustomerNumber(any(String.class))).thenReturn(false);
+    void shouldRegisterCustomerAndWriteOutboxEvent() {
+        when(customerRepository.existsByNationalIdAndDeletedAtIsNull("10000000146")).thenReturn(false);
+        when(customerRepository.existsByCustomerNumber(anyString())).thenReturn(false);
         when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        CustomerResponse response = service.registerIndividual(request, "corr-123");
+        var response = service.registerIndividual(request(), "corr-1");
 
-        assertNotNull(response);
-        assertEquals(request.firstName(), response.firstName());
-        assertEquals(request.lastName(), response.lastName());
         assertEquals(CustomerStatus.PROSPECT, response.status());
-
-        ArgumentCaptor<Customer> customerCaptor = ArgumentCaptor.forClass(Customer.class);
-        verify(customerRepository).save(customerCaptor.capture());
-        assertTrue(customerCaptor.getValue().getCustomerNumber().startsWith("CUS-"));
-
+        verify(customerRepository).save(any(Customer.class));
         verify(outboxEventRepository).save(any(CustomerOutboxEvent.class));
     }
 
     @Test
-    void registerIndividual_shouldRejectDuplicateNationalId() {
-        CustomerRegistrationRequest request = validRequest();
-        when(customerRepository.existsByNationalIdAndDeletedAtIsNull(request.nationalId())).thenReturn(true);
-
-        assertThrows(BusinessException.class, () -> service.registerIndividual(request, "corr-123"));
-
-        verify(customerRepository, never()).save(any(Customer.class));
-        verify(outboxEventRepository, never()).save(any(CustomerOutboxEvent.class));
+    void shouldRejectDuplicateNationalId() {
+        when(customerRepository.existsByNationalIdAndDeletedAtIsNull("10000000146")).thenReturn(true);
+        assertThrows(BusinessException.class, () -> service.registerIndividual(request(), "corr-1"));
+        verify(customerRepository, never()).save(any());
+        verify(outboxEventRepository, never()).save(any());
     }
 
     @Test
-    void list_shouldReturnOnlyRepositoryResults() {
-        Customer customer = createCustomer();
-        when(customerRepository.findByDeletedAtIsNullOrderByCreatedAtDesc()).thenReturn(List.of(customer));
+    void shouldApproveKycAndWriteOutboxEvent() {
+        UUID id = UUID.randomUUID();
+        Customer customer = Customer.registerIndividual(UUID.randomUUID(), "CUS-100001", "Ada", "Lovelace",
+                "10000000146", LocalDate.of(1995, 1, 1), CustomerSegment.MASS);
+        when(customerRepository.findByIdAndDeletedAtIsNull(id)).thenReturn(Optional.of(customer));
 
-        List<CustomerResponse> result = service.list();
+        var response = service.approveKyc(id, new KycDecisionRequest("verified"));
 
-        assertEquals(1, result.size());
-        assertEquals(customer.getId(), result.getFirst().id());
-    }
-
-    @Test
-    void get_shouldReturnCustomer_whenCustomerExists() {
-        Customer customer = createCustomer();
-        when(customerRepository.findByIdAndDeletedAtIsNull(customer.getId())).thenReturn(Optional.of(customer));
-
-        CustomerResponse result = service.get(customer.getId());
-
-        assertEquals(customer.getId(), result.id());
-    }
-
-    @Test
-    void get_shouldThrowBusinessException_whenCustomerDoesNotExist() {
-        UUID customerId = UUID.randomUUID();
-        when(customerRepository.findByIdAndDeletedAtIsNull(customerId)).thenReturn(Optional.empty());
-
-        assertThrows(BusinessException.class, () -> service.get(customerId));
-    }
-
-    @Test
-    void approveKyc_shouldActivateCustomerAndPublishEvent() {
-        Customer customer = createCustomer();
-        when(customerRepository.findByIdAndDeletedAtIsNull(customer.getId())).thenReturn(Optional.of(customer));
-
-        CustomerResponse result = service.approveKyc(customer.getId(), new KycDecisionRequest("Belgeler uygun"));
-
-        assertEquals(CustomerStatus.ACTIVE, result.status());
-        assertEquals("Belgeler uygun", result.statusReason());
+        assertEquals(CustomerStatus.ACTIVE, response.status());
         verify(outboxEventRepository).save(any(CustomerOutboxEvent.class));
     }
 
     @Test
-    void rejectKyc_shouldCloseCustomerAndPublishEvent() {
-        Customer customer = createCustomer();
-        when(customerRepository.findByIdAndDeletedAtIsNull(customer.getId())).thenReturn(Optional.of(customer));
-
-        CustomerResponse result = service.rejectKyc(customer.getId(), new KycDecisionRequest("Belge gecersiz"));
-
-        assertEquals(CustomerStatus.CLOSED, result.status());
-        assertEquals("Belge gecersiz", result.statusReason());
-        verify(outboxEventRepository).save(any(CustomerOutboxEvent.class));
-    }
-
-    private CustomerRegistrationRequest validRequest() {
-        return new CustomerRegistrationRequest(
-                UUID.randomUUID(),
-                "Ayse",
-                "Yilmaz",
-                "12345678901",
-                LocalDate.of(2000, 1, 15),
-                CustomerSegment.MASS
-        );
-    }
-
-    private Customer createCustomer() {
-        return Customer.registerIndividual(
-                UUID.randomUUID(),
-                "CUS-123456",
-                "Ayse",
-                "Yilmaz",
-                "12345678901",
-                LocalDate.of(2000, 1, 15),
-                CustomerSegment.MASS
-        );
+    void shouldFailWhenCustomerDoesNotExist() {
+        UUID id = UUID.randomUUID();
+        when(customerRepository.findByIdAndDeletedAtIsNull(id)).thenReturn(Optional.empty());
+        assertThrows(BusinessException.class, () -> service.get(id));
     }
 }

@@ -1,0 +1,22 @@
+spring:
+  cloud:
+    config:
+      enabled: false
+    discovery:
+      enabled: false
+  kafka:
+    listener:
+      auto-startup: false
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+eureka:
+  client:
+    enabled: false
+
+management:
+  tracing:
+    enabled: false
