@@ -13,37 +13,37 @@ public class GatewayRouteConfig {
         return builder.routes()
                 .route("bff-service", route -> route
                         .path("/api/v1/bff/**")
-                        .uri("lb://bff-service"))
+                        .uri("http://bff-service:9011"))
                 .route("identity-service", route -> route
                         .path("/api/v1/auth/**", "/api/v1/users/**", "/api/v1/identity/**")
-                        .uri("lb://identity-service"))
+                        .uri("http://identity-service:9001"))
                 .route("customer-service", route -> route
                         .path("/api/v1/customers", "/api/v1/customers/**")
-                        .uri("lb://customer-service"))
+                        .uri("http://customer-service:9002"))
                 .route("product-catalog-service", route -> route
                         .path("/api/v1/products", "/api/v1/products/**", "/api/v1/categories", "/api/v1/categories/**")
-                        .uri("lb://product-catalog-service"))
+                        .uri("http://product-catalog-service:9003"))
                 .route("order-service", route -> route
                         .path("/api/v1/orders", "/api/v1/orders/**")
-                        .uri("lb://order-service"))
+                        .uri("http://order-service:9004"))
                 .route("subscription-service", route -> route
                         .path("/api/v1/subscriptions", "/api/v1/subscriptions/**")
-                        .uri("lb://subscription-service"))
+                        .uri("http://subscription-service:9005"))
                 .route("usage-service", route -> route
                         .path("/api/v1/usage/**")
-                        .uri("lb://usage-service"))
+                        .uri("http://usage-service:9006"))
                 .route("billing-service", route -> route
                         .path("/api/v1/invoices", "/api/v1/invoices/**", "/api/v1/billing/**")
-                        .uri("lb://billing-service"))
+                        .uri("http://billing-service:9007"))
                 .route("payment-service", route -> route
                         .path("/api/v1/payments", "/api/v1/payments/**")
-                        .uri("lb://payment-service"))
+                        .uri("http://payment-service:9008"))
                 .route("notification-service", route -> route
                         .path("/api/v1/notifications", "/api/v1/notifications/**")
-                        .uri("lb://notification-service"))
+                        .uri("http://notification-service:9009"))
                 .route("ticket-service", route -> route
                         .path("/api/v1/tickets", "/api/v1/tickets/**")
-                        .uri("lb://ticket-service"))
+                        .uri("http://ticket-service:9010"))
                 .build();
     }
 }

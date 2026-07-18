@@ -24,37 +24,37 @@ spring:
                 redis-rate-limiter.requestedTokens: 1
           routes:
             - id: bff-service
-              uri: lb://bff-service
+              uri: http://bff-service:9011
               predicates: ["Path=/api/v1/bff/**"]
             - id: identity-service
-              uri: lb://identity-service
+              uri: http://identity-service:9001
               predicates: ["Path=/api/v1/auth/**,/api/v1/users/**,/api/v1/identity/**"]
             - id: customer-service
-              uri: lb://customer-service
+              uri: http://customer-service:9002
               predicates: ["Path=/api/v1/customers,/api/v1/customers/**"]
             - id: product-catalog-service
-              uri: lb://product-catalog-service
+              uri: http://product-catalog-service:9003
               predicates: ["Path=/api/v1/products,/api/v1/products/**,/api/v1/categories,/api/v1/categories/**,/api/v1/plans/**,/api/v1/tariffs/**,/api/v1/addons/**"]
             - id: order-service
-              uri: lb://order-service
+              uri: http://order-service:9004
               predicates: ["Path=/api/v1/orders,/api/v1/orders/**"]
             - id: subscription-service
-              uri: lb://subscription-service
+              uri: http://subscription-service:9005
               predicates: ["Path=/api/v1/subscriptions,/api/v1/subscriptions/**"]
             - id: usage-service
-              uri: lb://usage-service
+              uri: http://usage-service:9006
               predicates: ["Path=/api/v1/usage/**"]
             - id: billing-service
-              uri: lb://billing-service
+              uri: http://billing-service:9007
               predicates: ["Path=/api/v1/invoices,/api/v1/invoices/**,/api/v1/billing/**"]
             - id: payment-service
-              uri: lb://payment-service
+              uri: http://payment-service:9008
               predicates: ["Path=/api/v1/payments,/api/v1/payments/**"]
             - id: notification-service
-              uri: lb://notification-service
+              uri: http://notification-service:9009
               predicates: ["Path=/api/v1/notifications,/api/v1/notifications/**"]
             - id: ticket-service
-              uri: lb://ticket-service
+              uri: http://ticket-service:9010
               predicates: ["Path=/api/v1/tickets,/api/v1/tickets/**"]
   data:
     redis:
