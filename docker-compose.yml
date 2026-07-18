@@ -582,6 +582,7 @@ services:
       CONFIG_SERVER_URL: http://config-server:8888
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      TELCOX_GATEWAY_DEMO_USER_CONTEXT_ENABLED: "true"
       JAVA_OPTS: "-Xms16m -Xmx160m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=64m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
     networks:
       - telcox-net
@@ -920,9 +921,8 @@ services:
       dockerfile: frontend/Dockerfile
       args:
         VITE_API_BASE_URL: /api/v1
-        # REST controller katmani tamamlanana kadar guvenli demo modu.
-        VITE_ENABLE_LIVE_API: "false"
-        VITE_ENVIRONMENT: UAT
+        VITE_ENABLE_LIVE_API: "true"
+        VITE_ENVIRONMENT: LOCAL
     image: telcox/signal-atlas-web:0.1.0
     container_name: telcox-signal-atlas-web
     restart: unless-stopped

@@ -19,7 +19,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class UserContextRelayFilterTest {
 
-    private final UserContextRelayFilter filter = new UserContextRelayFilter();
+    private final UserContextRelayFilter filter = new UserContextRelayFilter(
+            false,
+            "demo-operator",
+            "Demo Operator",
+            "demo.operator@telcox.local",
+            "ADMIN,SUPPORT,BILLING,OPS"
+    );
 
     @Test
     void replacesClientSuppliedHeadersWithTrustedJwtContext() {
@@ -51,5 +57,33 @@ class UserContextRelayFilterTest {
                 .isEqualTo("AGENT,CUSTOMER");
         assertThat(forwarded.get().getRequest().getHeaders().getFirst(UserContextRelayFilter.LEGACY_ROLES_HEADER))
                 .isNull();
+    }
+
+    @Test
+    void addsDemoUserHeadersWhenDemoContextIsEnabledWithoutAuthentication() {
+        UserContextRelayFilter demoFilter = new UserContextRelayFilter(
+                true,
+                "demo-operator",
+                "Demo Operator",
+                "demo.operator@telcox.local",
+                "ADMIN,SUPPORT,BILLING,OPS"
+        );
+        ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/bff/dashboard/summary")
+                .header(UserContextRelayFilter.USER_ID_HEADER, "spoofed-user")
+                .build());
+        AtomicReference<ServerWebExchange> forwarded = new AtomicReference<>();
+        GatewayFilterChain chain = forwardedExchange -> {
+            forwarded.set(forwardedExchange);
+            return Mono.empty();
+        };
+
+        demoFilter.filter(exchange, chain).block();
+
+        assertThat(forwarded.get().getRequest().getHeaders().getFirst(UserContextRelayFilter.USER_ID_HEADER))
+                .isEqualTo("demo-operator");
+        assertThat(forwarded.get().getRequest().getHeaders().getFirst(UserContextRelayFilter.BFF_USER_NAME_HEADER))
+                .isEqualTo("Demo Operator");
+        assertThat(forwarded.get().getRequest().getHeaders().getFirst(UserContextRelayFilter.BFF_ROLES_HEADER))
+                .isEqualTo("ADMIN,SUPPORT,BILLING,OPS");
     }
 }

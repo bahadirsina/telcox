@@ -5,8 +5,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -58,14 +60,24 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    public SecurityWebFilterChain springSecurityFilterChain(
+            ServerHttpSecurity http,
+            @Value("${telcox.gateway.demo-user-context.enabled:false}") boolean demoUserContextEnabled) {
         http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 // CORS Java tarafında CorsConfig ile yönetiliyor (INF-04)
                 .cors(cors -> {})
                 .authorizeExchange(ex -> ex
                         .pathMatchers(PUBLIC_PATHS).permitAll()
-                        .anyExchange().authenticated()
+                        .anyExchange().access((authentication, context) -> {
+                            if (demoUserContextEnabled) {
+                                return Mono.just(new AuthorizationDecision(true));
+                            }
+                            return authentication
+                                    .map(Authentication::isAuthenticated)
+                                    .defaultIfEmpty(false)
+                                    .map(AuthorizationDecision::new);
+                        })
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(keycloakAuthConverter()))

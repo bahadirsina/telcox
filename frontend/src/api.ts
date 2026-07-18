@@ -1,7 +1,7 @@
 export const integration = {
   baseUrl: import.meta.env.VITE_API_BASE_URL ?? "/api/v1",
-  live: import.meta.env.VITE_ENABLE_LIVE_API === "true",
-  environment: import.meta.env.VITE_ENVIRONMENT ?? "UAT",
+  live: import.meta.env.VITE_ENABLE_LIVE_API !== "false",
+  environment: import.meta.env.VITE_ENVIRONMENT ?? "LOCAL",
 } as const;
 
 export type ServiceKey =
@@ -25,7 +25,7 @@ export const serviceRoutes: Record<ServiceKey, string> = {
   orders: "/orders",
   subscriptions: "/subscriptions",
   usage: "/usage",
-  billing: "/billing",
+  billing: "/invoices",
   payments: "/payments",
   notifications: "/notifications",
   tickets: "/tickets",

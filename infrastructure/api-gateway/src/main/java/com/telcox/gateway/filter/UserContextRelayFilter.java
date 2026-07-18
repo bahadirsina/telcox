@@ -2,6 +2,7 @@ package com.telcox.gateway.filter;
 
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.core.Authentication;
@@ -35,12 +36,33 @@ public class UserContextRelayFilter implements GlobalFilter, Ordered {
     public static final String BFF_USER_EMAIL_HEADER = "X-Telcox-User-Email";
     public static final String BFF_ROLES_HEADER = "X-Telcox-User-Roles";
 
+    private final boolean demoUserContextEnabled;
+    private final String demoUserId;
+    private final String demoUserName;
+    private final String demoUserEmail;
+    private final String demoUserRoles;
+
+    public UserContextRelayFilter(
+            @Value("${telcox.gateway.demo-user-context.enabled:false}") boolean demoUserContextEnabled,
+            @Value("${telcox.gateway.demo-user-context.user-id:demo-operator}") String demoUserId,
+            @Value("${telcox.gateway.demo-user-context.user-name:Demo Operator}") String demoUserName,
+            @Value("${telcox.gateway.demo-user-context.email:demo.operator@telcox.local}") String demoUserEmail,
+            @Value("${telcox.gateway.demo-user-context.roles:ADMIN,SUPPORT,BILLING,OPS}") String demoUserRoles) {
+        this.demoUserContextEnabled = demoUserContextEnabled;
+        this.demoUserId = demoUserId;
+        this.demoUserName = demoUserName;
+        this.demoUserEmail = demoUserEmail;
+        this.demoUserRoles = demoUserRoles;
+    }
+
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         return ReactiveSecurityContextHolder.getContext()
                 .map(context -> context.getAuthentication())
                 .flatMap(authentication -> chain.filter(withUserHeaders(exchange, authentication)))
-                .switchIfEmpty(chain.filter(stripUserHeaders(exchange)));
+                .switchIfEmpty(chain.filter(
+                        demoUserContextEnabled ? withDemoUserHeaders(exchange) : stripUserHeaders(exchange)
+                ));
     }
 
     @Override
@@ -83,6 +105,20 @@ public class UserContextRelayFilter implements GlobalFilter, Ordered {
                 .headers(this::removeUserHeaders)
                 .build();
         return exchange.mutate().request(request).build();
+    }
+
+    private ServerWebExchange withDemoUserHeaders(ServerWebExchange exchange) {
+        ServerHttpRequest.Builder builder = exchange.getRequest().mutate();
+        builder.headers(headers -> {
+            removeUserHeaders(headers);
+            headers.set(USER_ID_HEADER, demoUserId);
+            headers.set(ROLES_HEADER, demoUserRoles);
+            headers.set(BFF_USER_ID_HEADER, demoUserId);
+            headers.set(BFF_USER_NAME_HEADER, demoUserName);
+            headers.set(BFF_USER_EMAIL_HEADER, demoUserEmail);
+            headers.set(BFF_ROLES_HEADER, demoUserRoles);
+        });
+        return exchange.mutate().request(builder.build()).build();
     }
 
     private void removeUserHeaders(org.springframework.http.HttpHeaders headers) {
