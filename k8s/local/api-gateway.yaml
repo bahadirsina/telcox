@@ -28,7 +28,7 @@ spec:
                 name: telcox-common-config
           env:
             - name: JAVA_OPTS
-              value: "-Xms256m -Xmx384m"
+              value: "-Xms16m -Xmx160m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=64m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
           readinessProbe:
             httpGet:
               path: /actuator/health

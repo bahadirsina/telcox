@@ -5,3 +5,29 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   config:
     import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:18888}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+server:
+  port: ${SERVER_PORT:9011}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:18761/eureka/}
+
+telcox:
+  bff:
+    upstream:
+      identity-service: ${IDENTITY_SERVICE_URL:http://localhost:19001}
+      customer-service: ${CUSTOMER_SERVICE_URL:http://localhost:19002}
+      product-catalog-service: ${PRODUCT_CATALOG_SERVICE_URL:http://localhost:19003}
+      order-service: ${ORDER_SERVICE_URL:http://localhost:19004}
+      subscription-service: ${SUBSCRIPTION_SERVICE_URL:http://localhost:19005}
+      usage-service: ${USAGE_SERVICE_URL:http://localhost:19006}
+      billing-service: ${BILLING_SERVICE_URL:http://localhost:19007}
+      payment-service: ${PAYMENT_SERVICE_URL:http://localhost:19008}
+      notification-service: ${NOTIFICATION_SERVICE_URL:http://localhost:19009}
+      ticket-service: ${TICKET_SERVICE_URL:http://localhost:19010}

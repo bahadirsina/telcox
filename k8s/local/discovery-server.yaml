@@ -25,7 +25,7 @@ spec:
             - containerPort: 8761
           env:
             - name: JAVA_OPTS
-              value: "-Xms256m -Xmx384m"
+              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
           readinessProbe:
             httpGet:
               path: /actuator/health
