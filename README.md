@@ -169,6 +169,8 @@ Ana ekranlar: Genel Bakış, Müşteriler, Müşteri 360, KYC, Katalog, Sipariş
 
 ![Signal Atlas Platform Ops](assets/screenshots/signal-atlas-platform-ops.png)
 
+![Signal Atlas Sistem Durumları](assets/screenshots/system.png)
+
 ## Linear Proje Takibi
 
 Proje yönetimi bitirme projesi görev dağılımına uygun şekilde Linear üzerinden yürütülmüştür. Repository içinde gerçek Linear ekran görüntüsü dosyası bulunmadığı için README sahte veya kırık görsel içermez.
