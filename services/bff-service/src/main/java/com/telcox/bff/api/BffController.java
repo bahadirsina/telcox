@@ -5,11 +5,13 @@ import com.telcox.bff.model.DashboardSummaryResponse;
 import com.telcox.bff.model.OnboardingOrderRequest;
 import com.telcox.bff.model.OperationAcceptedResponse;
 import com.telcox.bff.model.OperationStatusResponse;
+import com.telcox.bff.model.PlatformOpsResponse;
 import com.telcox.bff.model.UserContext;
 import com.telcox.bff.model.UserContextResponse;
 import com.telcox.bff.service.Customer360Service;
 import com.telcox.bff.service.DashboardService;
 import com.telcox.bff.service.OrderOperationService;
+import com.telcox.bff.service.PlatformOpsService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -33,13 +35,16 @@ public class BffController {
     private final DashboardService dashboardService;
     private final Customer360Service customer360Service;
     private final OrderOperationService orderOperationService;
+    private final PlatformOpsService platformOpsService;
 
     public BffController(DashboardService dashboardService,
                          Customer360Service customer360Service,
-                         OrderOperationService orderOperationService) {
+                         OrderOperationService orderOperationService,
+                         PlatformOpsService platformOpsService) {
         this.dashboardService = dashboardService;
         this.customer360Service = customer360Service;
         this.orderOperationService = orderOperationService;
+        this.platformOpsService = platformOpsService;
     }
 
     @GetMapping("/me")
@@ -53,6 +58,14 @@ public class BffController {
             @RequestHeader(value = "X-Correlation-Id", required = false, defaultValue = "bff-dashboard") String correlationId
     ) {
         return dashboardService.summary(UserContext.from(request), correlationId);
+    }
+
+    @GetMapping("/platform/ops")
+    public PlatformOpsResponse platformOps(
+            HttpServletRequest request,
+            @RequestHeader(value = "X-Correlation-Id", required = false, defaultValue = "bff-platform-ops") String correlationId
+    ) {
+        return platformOpsService.snapshot(UserContext.from(request), correlationId);
     }
 
     @GetMapping("/customers/{customerId}/360")

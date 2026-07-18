@@ -611,11 +611,20 @@ services:
       - "19011:9011"
     environment:
       <<: *service-common-env
+      API_GATEWAY_URL: http://api-gateway:8080
+      BFF_SERVICE_URL: http://bff-service:9011
+      IDENTITY_SERVICE_URL: http://identity-service:9001
       CUSTOMER_SERVICE_URL: http://customer-service:9002
+      PRODUCT_CATALOG_SERVICE_URL: http://product-catalog-service:9003
       ORDER_SERVICE_URL: http://order-service:9004
       SUBSCRIPTION_SERVICE_URL: http://subscription-service:9005
+      USAGE_SERVICE_URL: http://usage-service:9006
       BILLING_SERVICE_URL: http://billing-service:9007
+      PAYMENT_SERVICE_URL: http://payment-service:9008
+      NOTIFICATION_SERVICE_URL: http://notification-service:9009
       TICKET_SERVICE_URL: http://ticket-service:9010
+      KAFKA_CONNECT_URL: http://kafka-connect:8083
+      PROMETHEUS_URL: http://prometheus:9090
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9011/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
       <<: *healthcheck-spring

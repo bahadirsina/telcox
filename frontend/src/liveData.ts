@@ -109,6 +109,66 @@ export type DashboardView = {
   metrics: Array<{ label: string; value: string; meta: string; tone?: "ok" | "live" | "warn" | "bad" }>;
 };
 
+export type PlatformOpsView = {
+  generatedAt: string;
+  environment: string;
+  statusLabel: string;
+  statusTone: "ok" | "warn" | "bad" | "live";
+  pulse: {
+    totalServices: number;
+    healthyServices: number;
+    degradedServices: number;
+    downServices: number;
+    totalRecords: number;
+    prometheusTargetsUp: number;
+    prometheusTargetsTotal: number;
+    connectorsRunning: number;
+    connectorsTotal: number;
+  };
+  services: Array<{
+    name: string;
+    label: string;
+    health: string;
+    tone: "ok" | "warn" | "bad" | "muted";
+    latency: string;
+    rate: string;
+    detail: string;
+  }>;
+  connectors: Array<{
+    name: string;
+    table: string;
+    status: string;
+    tone: "ok" | "warn" | "bad";
+    detail: string;
+  }>;
+  events: Array<{
+    type: string;
+    service: string;
+    status: string;
+    tone: "ok" | "warn" | "bad" | "live";
+    detail: string;
+    time: string;
+  }>;
+  incident: {
+    title: string;
+    value: string;
+    detail: string;
+    tone: "ok" | "warn" | "bad";
+  };
+};
+
+export type SystemStatesView = {
+  generatedAt: string;
+  cards: Array<{
+    eyebrow: string;
+    title: string;
+    status: string;
+    tone: "ok" | "warn" | "bad" | "live" | "muted";
+    description: string;
+    detail: string;
+  }>;
+};
+
 type LiveResource<T> = {
   data: T;
   loading: boolean;
@@ -227,6 +287,45 @@ type DashboardSummaryDto = {
   counters: Array<{ label: string; value: number; status: string }>;
 };
 
+type PlatformOpsDto = {
+  generatedAt: string;
+  environment: string;
+  overallStatus: string;
+  pulse: PlatformOpsView["pulse"];
+  services: Array<{
+    service: string;
+    label: string;
+    group: string;
+    status: string;
+    available: boolean;
+    dataAvailable: boolean;
+    latencyMs: number;
+    records: number;
+    detail: string;
+  }>;
+  connectors: Array<{
+    name: string;
+    status: string;
+    available: boolean;
+    runningTasks: number;
+    totalTasks: number;
+    detail: string;
+  }>;
+  prometheus: {
+    available: boolean;
+    targetsUp: number;
+    targetsTotal: number;
+    detail: string;
+  };
+  events: Array<{
+    type: string;
+    service: string;
+    status: string;
+    detail: string;
+    occurredAt: string;
+  }>;
+};
+
 const planNames: Record<string, string> = {
   "ATL-20-P": "Atlas 20 GB",
   "ATL-40-P": "Atlas 40 GB",
@@ -326,6 +425,47 @@ export const fallbackDashboardView: DashboardView = {
   ],
 };
 
+export const fallbackPlatformOpsView: PlatformOpsView = {
+  generatedAt: "Snapshot",
+  environment: integration.environment,
+  statusLabel: "Snapshot",
+  statusTone: "warn",
+  pulse: {
+    totalServices: 0,
+    healthyServices: 0,
+    degradedServices: 0,
+    downServices: 0,
+    totalRecords: 0,
+    prometheusTargetsUp: 0,
+    prometheusTargetsTotal: 0,
+    connectorsRunning: 0,
+    connectorsTotal: 0,
+  },
+  services: [],
+  connectors: [],
+  events: [],
+  incident: {
+    title: "Canlı platform snapshot alınamadı",
+    value: "-",
+    detail: "BFF platform endpoint'i yanıt vermedi.",
+    tone: "warn",
+  },
+};
+
+export const fallbackSystemStatesView: SystemStatesView = {
+  generatedAt: "Snapshot",
+  cards: [
+    {
+      eyebrow: "Offline",
+      title: "Canlı sistem durumu alınamadı",
+      status: "Snapshot",
+      tone: "warn",
+      description: "BFF platform endpoint'i yanıt verene kadar son bilinen durum desenleri gösterilir.",
+      detail: "bff-service /platform/ops",
+    },
+  ],
+};
+
 export function useLiveResource<T>(fallback: T, loader: () => Promise<T>, deps: readonly unknown[] = []): LiveResource<T> {
   const [state, setState] = useState<LiveResource<T>>({
     data: fallback,
@@ -386,6 +526,15 @@ export async function loadDashboardView(): Promise<DashboardView> {
       { label: "Açık talep", value: formatCount(tickets), meta: "ticket-service", tone: tickets > 0 ? "warn" : "ok" },
     ],
   };
+}
+
+export async function loadPlatformOpsView(): Promise<PlatformOpsView> {
+  const snapshot = await apiRequest<PlatformOpsDto>("bff", "/platform/ops");
+  return platformOpsFromDto(snapshot);
+}
+
+export async function loadSystemStatesView(): Promise<SystemStatesView> {
+  return systemStatesFromOps(await loadPlatformOpsView());
 }
 
 export async function loadCustomerRows(): Promise<CustomerRow[]> {
@@ -580,6 +729,161 @@ function usageFromQuotas(quotas: QuotaDto[]): UsageView {
     smsRemaining: sms ? `${formatInteger(quotaRemaining(sms))} adet kaldı` : fallbackUsageView.smsRemaining,
     records: staticUsageRecords,
   };
+}
+
+function platformOpsFromDto(snapshot: PlatformOpsDto): PlatformOpsView {
+  const services = snapshot.services.map((service) => ({
+    name: service.service,
+    label: service.label,
+    health: platformStatusLabel(service.status),
+    tone: platformStatusTone(service.status),
+    latency: `${Math.round(service.latencyMs)} ms`,
+    rate: service.records > 0 ? `${formatCount(service.records)} kayıt` : service.dataAvailable ? "health only" : "veri yok",
+    detail: service.detail,
+  }));
+  const connectors = snapshot.connectors.map((connector) => ({
+    name: connector.name,
+    table: connector.totalTasks > 0 ? `${connector.runningTasks}/${connector.totalTasks} task` : "worker",
+    status: connector.available ? "Sağlıklı" : platformStatusLabel(connector.status),
+    tone: connector.available ? "ok" as const : platformStatusTone(connector.status) === "bad" ? "bad" as const : "warn" as const,
+    detail: connector.detail,
+  }));
+  const events = snapshot.events.map((event) => ({
+    type: event.type,
+    service: event.service,
+    status: event.status,
+    tone: platformEventTone(event.status),
+    detail: event.detail,
+    time: formatTime(event.occurredAt),
+  }));
+  const incident = platformIncident(snapshot);
+
+  return {
+    generatedAt: formatTime(snapshot.generatedAt),
+    environment: snapshot.environment,
+    statusLabel: platformStatusLabel(snapshot.overallStatus),
+    statusTone: platformEventTone(snapshot.overallStatus),
+    pulse: snapshot.pulse,
+    services,
+    connectors,
+    events,
+    incident,
+  };
+}
+
+function systemStatesFromOps(ops: PlatformOpsView): SystemStatesView {
+  const pulse = ops.pulse;
+  const unavailableServices = ops.services.filter((service) => service.tone === "bad");
+  const degradedServices = ops.services.filter((service) => service.tone === "warn");
+  return {
+    generatedAt: ops.generatedAt,
+    cards: [
+      {
+        eyebrow: "Control plane",
+        title: "Genel platform durumu",
+        status: ops.statusLabel,
+        tone: ops.statusTone,
+        description: `${pulse.healthyServices}/${pulse.totalServices} servis sağlıklı.`,
+        detail: `Son kontrol ${ops.generatedAt}`,
+      },
+      {
+        eyebrow: "Service health",
+        title: unavailableServices.length > 0 ? "Kritik servis kesintisi" : "Servis erişilebilirliği",
+        status: unavailableServices.length > 0 ? `${unavailableServices.length} down` : "UP",
+        tone: unavailableServices.length > 0 ? "bad" : degradedServices.length > 0 ? "warn" : "ok",
+        description: unavailableServices.length > 0
+          ? unavailableServices.map((service) => service.name).join(", ")
+          : degradedServices.length > 0
+            ? `${degradedServices.length} servis veri katmanında riskli.`
+            : "Tüm probed servisler actuator health üzerinden erişilebilir.",
+        detail: `Degraded ${pulse.degradedServices} · Down ${pulse.downServices}`,
+      },
+      {
+        eyebrow: "Data freshness",
+        title: "Canlı kayıt kapsamı",
+        status: `${formatCount(pulse.totalRecords)} kayıt`,
+        tone: pulse.totalRecords > 0 ? "live" : "warn",
+        description: "BFF ana domain endpointlerinden canlı kayıt sayımı aldı.",
+        detail: "customer, product, order, subscription, usage, billing, ticket",
+      },
+      {
+        eyebrow: "Kafka Connect",
+        title: "CDC worker durumu",
+        status: `${pulse.connectorsRunning}/${pulse.connectorsTotal}`,
+        tone: pulse.connectorsTotal === 0 ? "warn" : pulse.connectorsRunning === pulse.connectorsTotal ? "ok" : "warn",
+        description: ops.connectors.map((connector) => `${connector.name}: ${connector.detail}`).join(" · ") || "Connector bilgisi alınamadı.",
+        detail: "kafka-connect REST",
+      },
+      {
+        eyebrow: "Prometheus",
+        title: "Scrape hedefleri",
+        status: `${pulse.prometheusTargetsUp}/${pulse.prometheusTargetsTotal}`,
+        tone: pulse.prometheusTargetsTotal === 0 ? "warn" : pulse.prometheusTargetsUp === pulse.prometheusTargetsTotal ? "ok" : "warn",
+        description: "Prometheus up query sonucu canlı scrape hedefleri.",
+        detail: "prometheus /api/v1/query?query=up",
+      },
+      {
+        eyebrow: "UI integration",
+        title: "Signal Atlas canlı bağlantı",
+        status: integration.live ? "Live API" : "Snapshot",
+        tone: integration.live ? "ok" : "warn",
+        description: integration.live ? "Frontend BFF platform endpoint'inden veri okuyor." : "VITE_ENABLE_LIVE_API=false.",
+        detail: `Ortam ${integration.environment}`,
+      },
+    ],
+  };
+}
+
+function platformIncident(snapshot: PlatformOpsDto): PlatformOpsView["incident"] {
+  const down = snapshot.services.find((service) => service.status === "DOWN");
+  if (down) {
+    return {
+      title: `${down.service} erişilemiyor`,
+      value: "DOWN",
+      detail: down.detail,
+      tone: "bad",
+    };
+  }
+  const degraded = snapshot.services.find((service) => service.status === "DEGRADED");
+  if (degraded) {
+    return {
+      title: `${degraded.service} veri katmanı riskli`,
+      value: "DEGRADED",
+      detail: degraded.detail,
+      tone: "warn",
+    };
+  }
+  const targets = snapshot.prometheus.targetsTotal > 0
+    ? `${snapshot.prometheus.targetsUp}/${snapshot.prometheus.targetsTotal}`
+    : "-";
+  return {
+    title: "Aktif kritik incident yok",
+    value: targets,
+    detail: "Servis health, connector worker ve Prometheus snapshot temiz.",
+    tone: "ok",
+  };
+}
+
+function platformStatusLabel(status: string): string {
+  return {
+    UP: "Sağlıklı",
+    DEGRADED: "Riskli",
+    DOWN: "Hata",
+  }[status] ?? status;
+}
+
+function platformStatusTone(status: string): "ok" | "warn" | "bad" | "muted" {
+  if (status === "UP") {
+    return "ok";
+  }
+  return status === "DOWN" ? "bad" : "warn";
+}
+
+function platformEventTone(status: string): "ok" | "warn" | "bad" | "live" {
+  if (status === "UP") {
+    return "ok";
+  }
+  return status === "DOWN" ? "bad" : "warn";
 }
 
 function quotaKind(quota: QuotaDto): string | undefined {

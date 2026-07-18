@@ -20,7 +20,13 @@ eureka:
 
 telcox:
   bff:
+    platform-cache-ttl: ${BFF_PLATFORM_CACHE_TTL:15s}
+    platform:
+      kafka-connect-url: ${KAFKA_CONNECT_URL:http://localhost:18084}
+      prometheus-url: ${PROMETHEUS_URL:http://localhost:19090}
     upstream:
+      api-gateway: ${API_GATEWAY_URL:http://localhost:18080}
+      bff-service: ${BFF_SERVICE_URL:http://localhost:19011}
       identity-service: ${IDENTITY_SERVICE_URL:http://localhost:19001}
       customer-service: ${CUSTOMER_SERVICE_URL:http://localhost:19002}
       product-catalog-service: ${PRODUCT_CATALOG_SERVICE_URL:http://localhost:19003}

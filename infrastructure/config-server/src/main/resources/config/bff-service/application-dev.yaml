@@ -2,6 +2,8 @@ telcox.profile: dev
 telcox:
   bff:
     upstream:
+      api-gateway: ${API_GATEWAY_URL:http://localhost:18080}
+      bff-service: ${BFF_SERVICE_URL:http://localhost:19011}
       identity-service: ${IDENTITY_SERVICE_URL:http://localhost:19001}
       customer-service: ${CUSTOMER_SERVICE_URL:http://localhost:19002}
       product-catalog-service: ${PRODUCT_CATALOG_SERVICE_URL:http://localhost:19003}

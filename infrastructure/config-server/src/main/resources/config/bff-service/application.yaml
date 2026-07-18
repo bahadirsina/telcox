@@ -4,7 +4,11 @@ server:
 telcox:
   bff:
     dashboard-cache-ttl: ${BFF_DASHBOARD_CACHE_TTL:45s}
+    platform-cache-ttl: ${BFF_PLATFORM_CACHE_TTL:15s}
     operation-ttl: ${BFF_OPERATION_TTL:30m}
+    platform:
+      kafka-connect-url: ${KAFKA_CONNECT_URL:http://localhost:18084}
+      prometheus-url: ${PROMETHEUS_URL:http://localhost:19090}
 
 management:
   endpoints:
