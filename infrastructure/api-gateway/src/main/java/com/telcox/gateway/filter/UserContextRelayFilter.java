@@ -57,8 +57,10 @@ public class UserContextRelayFilter implements GlobalFilter, Ordered {
 
             if (authentication instanceof JwtAuthenticationToken jwtAuthentication) {
                 Jwt jwt = jwtAuthentication.getToken();
-                userId = firstPresent(jwt.getSubject(), userId);
-                String username = firstPresent(jwt.getClaimAsString("preferred_username"), jwt.getSubject());
+                userId = firstPresent(jwt.getSubject(),
+                        firstPresent(jwt.getClaimAsString("preferred_username"),
+                                firstPresent(jwt.getClaimAsString("email"), userId)));
+                String username = firstPresent(jwt.getClaimAsString("preferred_username"), userId);
                 headers.set(BFF_USER_NAME_HEADER, username);
                 String email = jwt.getClaimAsString("email");
                 if (email != null && !email.isBlank()) {
