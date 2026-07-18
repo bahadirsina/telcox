@@ -167,7 +167,7 @@ Ana ekranlar: Genel Bakış, Müşteriler, Müşteri 360, KYC, Katalog, Sipariş
 
 ![Signal Atlas Müşteri 360](assets/screenshots/signal-atlas-customer360.png)
 
-![Signal Atlas Platform Ops](assets/screenshots/platformops.png?v=e6f6a01)
+![Signal Atlas Platform Ops](assets/screenshots/ops.png)
 
 ![Signal Atlas Sistem Durumları](assets/screenshots/system.png)
 
