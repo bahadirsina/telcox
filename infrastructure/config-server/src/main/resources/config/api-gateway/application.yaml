@@ -31,31 +31,31 @@ spring:
               predicates: ["Path=/api/v1/auth/**,/api/v1/users/**,/api/v1/identity/**"]
             - id: customer-service
               uri: lb://customer-service
-              predicates: ["Path=/api/v1/customers/**"]
+              predicates: ["Path=/api/v1/customers,/api/v1/customers/**"]
             - id: product-catalog-service
               uri: lb://product-catalog-service
-              predicates: ["Path=/api/v1/products/**,/api/v1/plans/**,/api/v1/tariffs/**,/api/v1/addons/**"]
+              predicates: ["Path=/api/v1/products,/api/v1/products/**,/api/v1/categories,/api/v1/categories/**,/api/v1/plans/**,/api/v1/tariffs/**,/api/v1/addons/**"]
             - id: order-service
               uri: lb://order-service
-              predicates: ["Path=/api/v1/orders/**"]
+              predicates: ["Path=/api/v1/orders,/api/v1/orders/**"]
             - id: subscription-service
               uri: lb://subscription-service
-              predicates: ["Path=/api/v1/subscriptions/**"]
+              predicates: ["Path=/api/v1/subscriptions,/api/v1/subscriptions/**"]
             - id: usage-service
               uri: lb://usage-service
               predicates: ["Path=/api/v1/usage/**"]
             - id: billing-service
               uri: lb://billing-service
-              predicates: ["Path=/api/v1/invoices/**,/api/v1/billing/**"]
+              predicates: ["Path=/api/v1/invoices,/api/v1/invoices/**,/api/v1/billing/**"]
             - id: payment-service
               uri: lb://payment-service
-              predicates: ["Path=/api/v1/payments/**"]
+              predicates: ["Path=/api/v1/payments,/api/v1/payments/**"]
             - id: notification-service
               uri: lb://notification-service
-              predicates: ["Path=/api/v1/notifications/**"]
+              predicates: ["Path=/api/v1/notifications,/api/v1/notifications/**"]
             - id: ticket-service
               uri: lb://ticket-service
-              predicates: ["Path=/api/v1/tickets/**"]
+              predicates: ["Path=/api/v1/tickets,/api/v1/tickets/**"]
   data:
     redis:
       host: ${REDIS_HOST:localhost}
