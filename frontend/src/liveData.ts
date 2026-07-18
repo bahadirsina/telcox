@@ -196,10 +196,14 @@ type PlanFeatureDto = {
 };
 
 type QuotaDto = {
-  quotaType: string;
-  totalAllowance: number | string;
-  usedAmount: number | string;
-  remainingAmount: number | string;
+  quotaType?: string;
+  type?: string;
+  totalAllowance?: number | string;
+  total?: number | string;
+  usedAmount?: number | string;
+  used?: number | string;
+  remainingAmount?: number | string;
+  remaining?: number | string;
   usagePercent: number | string;
   periodStart: string;
   periodEnd: string;
@@ -556,26 +560,42 @@ export async function loadTicketView(): Promise<TicketView> {
 }
 
 function usageFromQuotas(quotas: QuotaDto[]): UsageView {
-  const data = quotas.find((quota) => quota.quotaType === "DATA_MB");
-  const voice = quotas.find((quota) => quota.quotaType === "VOICE_MIN");
-  const sms = quotas.find((quota) => quota.quotaType === "SMS_COUNT");
+  const data = quotas.find((quota) => quotaKind(quota) === "DATA_MB");
+  const voice = quotas.find((quota) => quotaKind(quota) === "VOICE_MIN");
+  const sms = quotas.find((quota) => quotaKind(quota) === "SMS_COUNT");
 
   return {
     period: data ? formatPeriod(data.periodStart, data.periodEnd) : fallbackUsageView.period,
-    dataUsed: data ? formatGigabytes(data.usedAmount) : fallbackUsageView.dataUsed,
-    dataTotal: data ? `${formatGigabytes(data.totalAllowance)} GB` : fallbackUsageView.dataTotal,
+    dataUsed: data ? formatGigabytes(quotaUsed(data)) : fallbackUsageView.dataUsed,
+    dataTotal: data ? `${formatGigabytes(quotaTotal(data))} GB` : fallbackUsageView.dataTotal,
     dataPercent: data ? percentLabel(data.usagePercent) : fallbackUsageView.dataPercent,
-    dataRemaining: data ? `${formatGigabytes(data.remainingAmount)} GB kaldı` : fallbackUsageView.dataRemaining,
-    voiceUsed: voice ? formatInteger(voice.usedAmount) : fallbackUsageView.voiceUsed,
-    voiceTotal: voice ? `${formatInteger(voice.totalAllowance)} dk` : fallbackUsageView.voiceTotal,
+    dataRemaining: data ? `${formatGigabytes(quotaRemaining(data))} GB kaldı` : fallbackUsageView.dataRemaining,
+    voiceUsed: voice ? formatInteger(quotaUsed(voice)) : fallbackUsageView.voiceUsed,
+    voiceTotal: voice ? `${formatInteger(quotaTotal(voice))} dk` : fallbackUsageView.voiceTotal,
     voicePercent: voice ? percentLabel(voice.usagePercent) : fallbackUsageView.voicePercent,
-    voiceRemaining: voice ? `${formatInteger(voice.remainingAmount)} dk kaldı` : fallbackUsageView.voiceRemaining,
-    smsUsed: sms ? formatInteger(sms.usedAmount) : fallbackUsageView.smsUsed,
-    smsTotal: sms ? `${formatInteger(sms.totalAllowance)} SMS` : fallbackUsageView.smsTotal,
+    voiceRemaining: voice ? `${formatInteger(quotaRemaining(voice))} dk kaldı` : fallbackUsageView.voiceRemaining,
+    smsUsed: sms ? formatInteger(quotaUsed(sms)) : fallbackUsageView.smsUsed,
+    smsTotal: sms ? `${formatInteger(quotaTotal(sms))} SMS` : fallbackUsageView.smsTotal,
     smsPercent: sms ? percentLabel(sms.usagePercent) : fallbackUsageView.smsPercent,
-    smsRemaining: sms ? `${formatInteger(sms.remainingAmount)} adet kaldı` : fallbackUsageView.smsRemaining,
+    smsRemaining: sms ? `${formatInteger(quotaRemaining(sms))} adet kaldı` : fallbackUsageView.smsRemaining,
     records: staticUsageRecords,
   };
+}
+
+function quotaKind(quota: QuotaDto): string | undefined {
+  return quota.quotaType ?? quota.type;
+}
+
+function quotaTotal(quota: QuotaDto): number | string | undefined {
+  return quota.totalAllowance ?? quota.total;
+}
+
+function quotaUsed(quota: QuotaDto): number | string | undefined {
+  return quota.usedAmount ?? quota.used;
+}
+
+function quotaRemaining(quota: QuotaDto): number | string | undefined {
+  return quota.remainingAmount ?? quota.remaining;
 }
 
 async function safe<T>(loader: () => Promise<T>, fallback: T): Promise<T> {
