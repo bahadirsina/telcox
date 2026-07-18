@@ -1,0 +1,10 @@
+INSERT INTO support_ticket (
+    id, ticket_number, customer_id, category, priority, status, subject, description,
+    assigned_team, assigned_agent_id, correlation_id, created_at, updated_at, assigned_at, sla_due_at
+)
+VALUES
+    ('77777777-7777-4777-8777-000000003108', 'TIC-3108', '11111111-1111-4111-8111-000000010482', 'Teknik destek', 'CRITICAL', 'OPEN', 'Ev internetinde baglanti kopmalari', 'Baglanti son iki gundur aksam saatlerinde sik sik kopuyor.', 'NOC Escalation', '88888888-8888-4888-8888-000000000001', 'demo-mvp-ticket-seed', TIMESTAMP '2026-06-19 13:48:00', TIMESTAMP '2026-06-19 14:02:00', TIMESTAMP '2026-06-19 14:02:00', TIMESTAMP '2026-06-19 14:56:18'),
+    ('77777777-7777-4777-8777-000000003109', 'TIC-3109', '11111111-1111-4111-8111-000000010461', 'Faturalama', 'HIGH', 'OPEN', 'Haziran faturasi yuksek geldi', 'Yurt disi paket ve data kullanim kalemleri icin detay istendi.', 'Billing Support', '88888888-8888-4888-8888-000000000002', 'demo-mvp-ticket-seed', TIMESTAMP '2026-06-19 12:31:00', TIMESTAMP '2026-06-19 12:40:00', TIMESTAMP '2026-06-19 12:40:00', TIMESTAMP '2026-06-19 18:40:00'),
+    ('77777777-7777-4777-8777-000000003110', 'TIC-3110', '11111111-1111-4111-8111-000000010461', 'Kullanim', 'MEDIUM', 'IN_PROGRESS', 'Roaming kota bildirimi gec geldi', 'Musteri kota bildirimini kullanimdan sonra aldigini belirtti.', 'Usage Support', '88888888-8888-4888-8888-000000000003', 'demo-mvp-ticket-seed', TIMESTAMP '2026-06-18 16:12:00', TIMESTAMP '2026-06-19 09:18:00', TIMESTAMP '2026-06-19 09:18:00', TIMESTAMP '2026-06-20 09:18:00'),
+    ('77777777-7777-4777-8777-000000003111', 'TIC-3111', '11111111-1111-4111-8111-000000010398', 'Tahsilat', 'MEDIUM', 'IN_PROGRESS', 'Kismi odeme sonrasi hat askida', 'Kalan bakiye odemesi sonrasi yeniden aktivasyon talebi.', 'Collections', '88888888-8888-4888-8888-000000000004', 'demo-mvp-ticket-seed', TIMESTAMP '2026-06-18 10:28:00', TIMESTAMP '2026-06-19 13:10:00', TIMESTAMP '2026-06-19 13:10:00', TIMESTAMP '2026-06-20 13:10:00')
+ON CONFLICT (id) DO NOTHING;

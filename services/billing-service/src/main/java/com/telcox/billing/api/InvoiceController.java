@@ -1,6 +1,7 @@
 package com.telcox.billing.api;
 
 import com.telcox.billing.domain.Invoice;
+import com.telcox.billing.repository.BillingAccountRepository;
 import com.telcox.billing.repository.InvoiceRepository;
 import com.telcox.billing.service.InvoiceIssuanceService;
 import com.telcox.billing.service.InvoiceLineService;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -31,18 +33,36 @@ import java.util.UUID;
 public class InvoiceController {
 
     private final InvoiceRepository invoiceRepository;
+    private final BillingAccountRepository billingAccountRepository;
     private final InvoiceLineService invoiceLineService;
     private final InvoiceIssuanceService invoiceIssuanceService;
     private final InvoicePdfService invoicePdfService;
 
     public InvoiceController(InvoiceRepository invoiceRepository,
+                             BillingAccountRepository billingAccountRepository,
                              InvoiceLineService invoiceLineService,
                              InvoiceIssuanceService invoiceIssuanceService,
                              InvoicePdfService invoicePdfService) {
         this.invoiceRepository = invoiceRepository;
+        this.billingAccountRepository = billingAccountRepository;
         this.invoiceLineService = invoiceLineService;
         this.invoiceIssuanceService = invoiceIssuanceService;
         this.invoicePdfService = invoicePdfService;
+    }
+
+    @GetMapping
+    public List<InvoiceResponse> list(@RequestParam(required = false) UUID customerId) {
+        if (customerId != null) {
+            return billingAccountRepository.findByCustomerId(customerId)
+                    .map(account -> invoiceRepository.findByBillingAccountIdOrderByCreatedAtDesc(account.getId()))
+                    .orElseGet(List::of)
+                    .stream()
+                    .map(InvoiceResponse::from)
+                    .toList();
+        }
+        return invoiceRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(InvoiceResponse::from)
+                .toList();
     }
 
     @GetMapping("/{invoiceId}")

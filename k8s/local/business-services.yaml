@@ -49,7 +49,7 @@ spec:
                   name: telcox-local-secret
                   key: JWT_SECRET
             - name: JAVA_OPTS
-              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
+              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
           readinessProbe:
             httpGet:
               path: /actuator/health
@@ -125,7 +125,7 @@ spec:
                   name: telcox-local-secret
                   key: DB_PASSWORD
             - name: JAVA_OPTS
-              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
+              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
           readinessProbe:
             httpGet:
               path: /actuator/health
@@ -201,7 +201,7 @@ spec:
                   name: telcox-local-secret
                   key: DB_PASSWORD
             - name: JAVA_OPTS
-              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
+              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
           readinessProbe:
             httpGet:
               path: /actuator/health
@@ -277,7 +277,7 @@ spec:
                   name: telcox-local-secret
                   key: DB_PASSWORD
             - name: JAVA_OPTS
-              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
+              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
           readinessProbe:
             httpGet:
               path: /actuator/health
@@ -353,7 +353,7 @@ spec:
                   name: telcox-local-secret
                   key: DB_PASSWORD
             - name: JAVA_OPTS
-              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
+              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
           readinessProbe:
             httpGet:
               path: /actuator/health
@@ -505,7 +505,7 @@ spec:
                   name: telcox-local-secret
                   key: DB_PASSWORD
             - name: JAVA_OPTS
-              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
+              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
           readinessProbe:
             httpGet:
               path: /actuator/health
@@ -661,7 +661,7 @@ spec:
             - name: SMTP_PORT
               value: "1025"
             - name: JAVA_OPTS
-              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
+              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
           readinessProbe:
             httpGet:
               path: /actuator/health
@@ -737,7 +737,7 @@ spec:
                   name: telcox-local-secret
                   key: DB_PASSWORD
             - name: JAVA_OPTS
-              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
+              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
           readinessProbe:
             httpGet:
               path: /actuator/health
