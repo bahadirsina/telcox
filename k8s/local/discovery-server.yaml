@@ -7,6 +7,8 @@ metadata:
     app: discovery-server
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: discovery-server
@@ -28,11 +30,12 @@ spec:
             httpGet:
               path: /actuator/health
               port: 8761
-            initialDelaySeconds: 30
-            periodSeconds: 10
+            initialDelaySeconds: 90
+            timeoutSeconds: 5
+            periodSeconds: 15
           livenessProbe:
             httpGet:
-              path: /actuator/health
+              path: /actuator/health/liveness
               port: 8761
             initialDelaySeconds: 60
             periodSeconds: 20

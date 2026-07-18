@@ -1,0 +1,768 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-service
+  namespace: telcox-local
+  labels:
+    app: identity-service
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: identity-service
+  template:
+    metadata:
+      labels:
+        app: identity-service
+    spec:
+      containers:
+        - name: identity-service
+          image: telcox/identity-service:1.0.0-SNAPSHOT
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9001
+          envFrom:
+            - configMapRef:
+                name: telcox-common-config
+          env:
+            - name: DB_HOST
+              value: identity-postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: identity_db
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: JWT_SECRET
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx384m -XX:MaxMetaspaceSize=256m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 9001
+            initialDelaySeconds: 90
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 9001
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: identity-service
+  namespace: telcox-local
+  labels:
+    app: identity-service
+spec:
+  selector:
+    app: identity-service
+  ports:
+    - name: http
+      port: 9001
+      targetPort: 9001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customer-service
+  namespace: telcox-local
+  labels:
+    app: customer-service
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: customer-service
+  template:
+    metadata:
+      labels:
+        app: customer-service
+    spec:
+      containers:
+        - name: customer-service
+          image: telcox/customer-service:1.0.0-SNAPSHOT
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9002
+          envFrom:
+            - configMapRef:
+                name: telcox-common-config
+          env:
+            - name: DB_HOST
+              value: customer-postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: customer_db
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx384m -XX:MaxMetaspaceSize=256m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 9002
+            initialDelaySeconds: 90
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 9002
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: customer-service
+  namespace: telcox-local
+  labels:
+    app: customer-service
+spec:
+  selector:
+    app: customer-service
+  ports:
+    - name: http
+      port: 9002
+      targetPort: 9002
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-catalog-service
+  namespace: telcox-local
+  labels:
+    app: product-catalog-service
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: product-catalog-service
+  template:
+    metadata:
+      labels:
+        app: product-catalog-service
+    spec:
+      containers:
+        - name: product-catalog-service
+          image: telcox/product-catalog-service:1.0.0-SNAPSHOT
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9003
+          envFrom:
+            - configMapRef:
+                name: telcox-common-config
+          env:
+            - name: DB_HOST
+              value: product-postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: product_db
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx384m -XX:MaxMetaspaceSize=256m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 9003
+            initialDelaySeconds: 90
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 9003
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-catalog-service
+  namespace: telcox-local
+  labels:
+    app: product-catalog-service
+spec:
+  selector:
+    app: product-catalog-service
+  ports:
+    - name: http
+      port: 9003
+      targetPort: 9003
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: telcox-local
+  labels:
+    app: order-service
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+        - name: order-service
+          image: telcox/order-service:1.0.0-SNAPSHOT
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9004
+          envFrom:
+            - configMapRef:
+                name: telcox-common-config
+          env:
+            - name: DB_HOST
+              value: order-postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: order_db
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx384m -XX:MaxMetaspaceSize=256m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 9004
+            initialDelaySeconds: 90
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 9004
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: telcox-local
+  labels:
+    app: order-service
+spec:
+  selector:
+    app: order-service
+  ports:
+    - name: http
+      port: 9004
+      targetPort: 9004
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: subscription-service
+  namespace: telcox-local
+  labels:
+    app: subscription-service
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: subscription-service
+  template:
+    metadata:
+      labels:
+        app: subscription-service
+    spec:
+      containers:
+        - name: subscription-service
+          image: telcox/subscription-service:1.0.0-SNAPSHOT
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9005
+          envFrom:
+            - configMapRef:
+                name: telcox-common-config
+          env:
+            - name: DB_HOST
+              value: subscription-postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: subscription_db
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx384m -XX:MaxMetaspaceSize=256m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 9005
+            initialDelaySeconds: 90
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 9005
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: subscription-service
+  namespace: telcox-local
+  labels:
+    app: subscription-service
+spec:
+  selector:
+    app: subscription-service
+  ports:
+    - name: http
+      port: 9005
+      targetPort: 9005
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: usage-service
+  namespace: telcox-local
+  labels:
+    app: usage-service
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: usage-service
+  template:
+    metadata:
+      labels:
+        app: usage-service
+    spec:
+      containers:
+        - name: usage-service
+          image: telcox/usage-service:1.0.0-SNAPSHOT
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9006
+          envFrom:
+            - configMapRef:
+                name: telcox-common-config
+          env:
+            - name: DB_HOST
+              value: usage-postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: usage_db
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx384m -XX:MaxMetaspaceSize=256m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 9006
+            initialDelaySeconds: 90
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 9006
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: usage-service
+  namespace: telcox-local
+  labels:
+    app: usage-service
+spec:
+  selector:
+    app: usage-service
+  ports:
+    - name: http
+      port: 9006
+      targetPort: 9006
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing-service
+  namespace: telcox-local
+  labels:
+    app: billing-service
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: billing-service
+  template:
+    metadata:
+      labels:
+        app: billing-service
+    spec:
+      containers:
+        - name: billing-service
+          image: telcox/billing-service:1.0.0-SNAPSHOT
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9007
+          envFrom:
+            - configMapRef:
+                name: telcox-common-config
+          env:
+            - name: DB_HOST
+              value: billing-postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: billing_db
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx384m -XX:MaxMetaspaceSize=256m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 9007
+            initialDelaySeconds: 90
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 9007
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: billing-service
+  namespace: telcox-local
+  labels:
+    app: billing-service
+spec:
+  selector:
+    app: billing-service
+  ports:
+    - name: http
+      port: 9007
+      targetPort: 9007
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: telcox-local
+  labels:
+    app: payment-service
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+        - name: payment-service
+          image: telcox/payment-service:1.0.0-SNAPSHOT
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9008
+          envFrom:
+            - configMapRef:
+                name: telcox-common-config
+          env:
+            - name: DB_HOST
+              value: payment-postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: payment_db
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx384m -XX:MaxMetaspaceSize=256m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 9008
+            initialDelaySeconds: 90
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 9008
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: telcox-local
+  labels:
+    app: payment-service
+spec:
+  selector:
+    app: payment-service
+  ports:
+    - name: http
+      port: 9008
+      targetPort: 9008
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: telcox-local
+  labels:
+    app: notification-service
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+        - name: notification-service
+          image: telcox/notification-service:1.0.0-SNAPSHOT
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9009
+          envFrom:
+            - configMapRef:
+                name: telcox-common-config
+          env:
+            - name: DB_HOST
+              value: notification-postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: notification_db
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+            - name: SMTP_HOST
+              value: mailhog
+            - name: SMTP_PORT
+              value: "1025"
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx384m -XX:MaxMetaspaceSize=256m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 9009
+            initialDelaySeconds: 90
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 9009
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: telcox-local
+  labels:
+    app: notification-service
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - name: http
+      port: 9009
+      targetPort: 9009
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticket-service
+  namespace: telcox-local
+  labels:
+    app: ticket-service
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ticket-service
+  template:
+    metadata:
+      labels:
+        app: ticket-service
+    spec:
+      containers:
+        - name: ticket-service
+          image: telcox/ticket-service:1.0.0-SNAPSHOT
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9010
+          envFrom:
+            - configMapRef:
+                name: telcox-common-config
+          env:
+            - name: DB_HOST
+              value: ticket-postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: ticket_db
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+            - name: JAVA_OPTS
+              value: "-Xms128m -Xmx384m -XX:MaxMetaspaceSize=256m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 9010
+            initialDelaySeconds: 90
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 9010
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ticket-service
+  namespace: telcox-local
+  labels:
+    app: ticket-service
+spec:
+  selector:
+    app: ticket-service
+  ports:
+    - name: http
+      port: 9010
+      targetPort: 9010
