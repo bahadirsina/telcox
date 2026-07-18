@@ -36,6 +36,15 @@ export function Status({ label, tone = toneForStatus(label) }: { label: string; 
   );
 }
 
+function currentTimeLabel() {
+  return new Intl.DateTimeFormat("tr-TR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(new Date());
+}
+
 export function Panel({
   title,
   eyebrow,
@@ -80,7 +89,7 @@ export function PageHeader({
         <p>{view.description}</p>
       </div>
       <div className="page-header__actions">
-        <span className="freshness">Son güncelleme <b>14:32:08</b></span>
+        <span className="freshness">Son güncelleme <b>{currentTimeLabel()}</b></span>
         {action}
       </div>
     </div>

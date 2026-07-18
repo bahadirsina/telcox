@@ -577,6 +577,10 @@ pre { margin: 15px 0; padding: 13px; overflow: auto; border: 1px solid rgba(121,
 .app-shell--ops .event-stream button { color: var(--text-light); border-color: rgba(237, 241, 235, .1); }.app-shell--ops .event-stream button:hover { background: var(--ink-800); }
 .incident-number { display: flex; align-items: baseline; gap: 9px; padding: 17px 18px 0; }.incident-number b { color: var(--fault); font: 700 25px/1 Sora, sans-serif; }.incident-number span { color: #8f9b94; font-size: 8px; }
 .incident-panel > svg { width: 100%; height: 86px; padding: 5px 15px; }.incident-panel path { fill: none; stroke: var(--fault); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.incident-panel--ok .incident-number b { color: var(--lime); }
+.incident-panel--ok path { stroke: var(--lime); opacity: .72; }
+.incident-panel--warn .incident-number b { color: var(--amber); }
+.incident-panel--warn path { stroke: var(--amber); }
 .incident-panel .action-row { padding: 0 15px 15px; }.incident-panel .button { border-color: rgba(237, 241, 235, .15); color: var(--text-light); background: var(--ink-800); }
 
 .states-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: stretch; }
