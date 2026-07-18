@@ -82,7 +82,7 @@ x-service-common: &service-common
     ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
     TRACING_SAMPLING_PROBABILITY: 1.0
     LOGGING_STRUCTURED_FORMAT: ecs
-    JAVA_OPTS: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
+    JAVA_OPTS: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
 
 # Tek resmi Debezium registry/tag'i. Kafka Connect worker bu image'i kullanır.
 x-debezium-connect-image: &debezium-connect-image quay.io/debezium/connect:2.7.3.Final
@@ -148,7 +148,7 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: telcox
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
-      JAVA_OPTS: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
+      JAVA_OPTS: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
     networks:
       - telcox-net
 
@@ -218,7 +218,7 @@ services:
     ports:
       - "19411:9411"
     environment:
-      JAVA_OPTS: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
+      JAVA_OPTS: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
     networks:
       - telcox-net
 
@@ -478,7 +478,7 @@ services:
     ports:
       - "18761:8761"
     environment:
-      JAVA_OPTS: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
+      JAVA_OPTS: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
     networks:
       - telcox-net
     healthcheck:
@@ -498,7 +498,7 @@ services:
       - "18888:8888"
     environment:
       EUREKA_URL: http://discovery-server:8761/eureka/
-      JAVA_OPTS: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
+      JAVA_OPTS: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
     networks:
       - telcox-net
     healthcheck:
@@ -583,7 +583,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       TELCOX_GATEWAY_DEMO_USER_CONTEXT_ENABLED: "true"
-      JAVA_OPTS: "-Xms16m -Xmx160m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=64m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
+      JAVA_OPTS: "-Xms16m -Xmx160m -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=64m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
     networks:
       - telcox-net
     healthcheck:
