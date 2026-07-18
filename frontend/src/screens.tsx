@@ -1,4 +1,4 @@
-import type { KeyboardEvent, ReactNode } from "react";
+import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
 import {
   Activity,
   ArrowDownToLine,
@@ -50,11 +50,13 @@ import {
 } from "lucide-react";
 import { integration } from "./api";
 import { Button, DataTable, Metric, Notice, PageHeader, Panel, Status, toneForStatus, type Tone } from "./components";
-import { customers as fallbackCustomers, events, invoices as fallbackInvoices, services, views, type NavItem, type ViewId } from "./data";
+import { customers as fallbackCustomers, events, invoices as fallbackInvoices, views, type NavItem, type ViewId } from "./data";
 import {
   fallbackCustomer360View,
   fallbackDashboardView,
   fallbackPlans,
+  fallbackPlatformOpsView,
+  fallbackSystemStatesView,
   fallbackTicketView,
   fallbackUsageView,
   loadCatalogPlans,
@@ -62,6 +64,8 @@ import {
   loadCustomerRows,
   loadDashboardView,
   loadInvoices,
+  loadPlatformOpsView,
+  loadSystemStatesView,
   loadTicketView,
   loadUsageView,
   useLiveResource,
@@ -99,6 +103,15 @@ function ScreenHeader({ id, action }: { id: ViewId; action?: ReactNode }) {
 
 function EmptyLink({ children, onClick }: { children: ReactNode; onClick: () => void }) {
   return <button className="text-link" onClick={onClick}>{children}<ChevronRight size={14} /></button>;
+}
+
+function useRefreshTick(intervalMs = 15000) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setTick((value) => value + 1), intervalMs);
+    return () => window.clearInterval(timer);
+  }, [intervalMs]);
+  return [tick, () => setTick((value) => value + 1)] as const;
 }
 
 export function LoginScreen({ onNavigate }: ScreenProps) {
@@ -284,11 +297,25 @@ export function AdminScreen() {
 }
 
 export function OpsScreen() {
-  return <><ScreenHeader id="ops" action={<Button><RefreshCw size={16} /> Yenile</Button>} /><section className="ops-pulse"><Status label="PROD: Riskli" tone="warn" /><span>Gateway <b>1.204 req/s</b></span><span>Kafka <b>4.821 msg/s</b></span><span>Error budget <b>%99,82</b></span><span>Son olay <b>14:32:08</b></span></section><div className="ops-grid"><Panel eyebrow="Service topology" title="TelcoX servis haritası" className="topology-panel"><div className="topology"><div className="topology-service gateway"><Server /><b>api-gateway</b><small>42 ms</small></div><div className="topology-bus"><Network /><span>Kafka event backbone</span></div>{services.slice(1).map((service, index) => <div className={`topology-service service-${index} ${service.health === "Hata" ? "failed" : service.health === "Riskli" ? "warning" : ""}`} key={service.name}><Database /><b>{service.name}</b><small>{service.latency} · {service.rate}</small></div>)}</div></Panel><Panel eyebrow="CDC health" title="Debezium connector'ları" className="connector-panel"><div className="connector"><span><Database /><b>dbz-customer-pg</b><small>customer.public.outbox_event</small></span><Status label="Sağlıklı · 0s lag" tone="ok" /></div><div className="connector"><span><Database /><b>dbz-billing-pg</b><small>billing.public.outbox_event</small></span><Status label="Riskli · 45s lag" tone="warn" /></div><div className="connector"><span><Database /><b>dbz-order-pg</b><small>order.public.outbox_event</small></span><Status label="Sağlıklı · 1s lag" tone="ok" /></div><LiveAction variant="secondary"><RefreshCw size={16} /> Connector restart</LiveAction></Panel><Panel eyebrow="Live event stream" title="Kafka izleyici" className="kafka-panel"><div className="event-stream">{events.slice(0, 4).map((event) => <button key={event.id}><i className={`dot dot--${event.tone}`} /><span><b>{event.type}</b><small className="mono">CorrID {event.id}</small></span><time>{event.time}</time></button>)}</div></Panel><Panel eyebrow="Incident" title="billing-service hata oranı" className="incident-panel"><div className="incident-number"><b>%4,2</b><span>5 dk error rate</span></div><svg viewBox="0 0 300 80"><path d="M0 64 L35 61 L60 66 L90 58 L120 60 L150 48 L175 52 L200 22 L230 28 L260 14 L300 19" /></svg><div className="action-row"><Button><Activity size={16} /> Trace'ler</Button><Button><Code2 size={16} /> Loglar</Button></div></Panel></div></>;
+  const [tick, refresh] = useRefreshTick();
+  const liveOps = useLiveResource(fallbackPlatformOpsView, loadPlatformOpsView, [tick]);
+  const ops = liveOps.data;
+  const gateway = ops.services.find((service) => service.name === "api-gateway");
+  const topologyServices = ops.services.filter((service) => service.name !== "api-gateway").slice(0, 5);
+  const availability = ops.pulse.totalServices > 0
+    ? `%${Math.round((ops.pulse.healthyServices / ops.pulse.totalServices) * 100)}`
+    : "-";
+
+  return <><ScreenHeader id="ops" action={<Button onClick={refresh}><RefreshCw size={16} /> Yenile</Button>} />{liveOps.error && <Notice kind="warning">Canlı platform snapshot alınamadı; son bilinen ops görünümü gösteriliyor.</Notice>}<section className="ops-pulse"><Status label={`${ops.environment}: ${ops.statusLabel}`} tone={ops.statusTone} /><span>Gateway <b>{gateway?.latency ?? "-"}</b></span><span>Kafka Connect <b>{ops.pulse.connectorsRunning}/{ops.pulse.connectorsTotal}</b></span><span>Servis sağlığı <b>{availability}</b></span><span>Son kontrol <b>{ops.generatedAt}</b></span></section><div className="ops-grid"><Panel eyebrow="Service topology" title="TelcoX servis haritası" className="topology-panel" action={<span className="mono muted">{liveOps.live ? "Canlı BFF" : "Snapshot"}</span>}><div className="topology"><div className={`topology-service gateway ${gateway?.tone === "bad" ? "failed" : gateway?.tone === "warn" ? "warning" : ""}`}><Server /><b>{gateway?.name ?? "api-gateway"}</b><small>{gateway?.latency ?? "-"} · {gateway?.health ?? "-"}</small></div><div className="topology-bus"><Network /><span>Kafka event backbone</span></div>{topologyServices.map((service, index) => <div className={`topology-service service-${index} ${service.tone === "bad" ? "failed" : service.tone === "warn" ? "warning" : ""}`} key={service.name}><Database /><b>{service.name}</b><small>{service.latency} · {service.rate}</small></div>)}</div></Panel><Panel eyebrow="CDC health" title="Kafka Connect" className="connector-panel">{ops.connectors.map((connector) => <div className="connector" key={connector.name}><span><Database /><b>{connector.name}</b><small>{connector.table} · {connector.detail}</small></span><Status label={connector.status} tone={connector.tone} /></div>)}<LiveAction variant="secondary"><RefreshCw size={16} /> Connector restart</LiveAction></Panel><Panel eyebrow="Live event stream" title="Platform olayları" className="kafka-panel"><div className="event-stream">{ops.events.map((event) => <button key={`${event.type}-${event.service}-${event.time}`}><i className={`dot dot--${event.tone}`} /><span><b>{event.type}</b><small className="mono">{event.service} · {event.detail}</small></span><time>{event.time}</time></button>)}</div></Panel><Panel eyebrow="Incident" title={ops.incident.title} className="incident-panel"><div className="incident-number"><b>{ops.incident.value}</b><span>{ops.incident.detail}</span></div><svg viewBox="0 0 300 80"><path d="M0 64 L35 61 L60 66 L90 58 L120 60 L150 48 L175 52 L200 22 L230 28 L260 14 L300 19" /></svg><div className="action-row"><Button><Activity size={16} /> Trace'ler</Button><Button><Code2 size={16} /> Loglar</Button></div></Panel></div></>;
 }
 
 export function StatesScreen() {
-  return <><ScreenHeader id="states" /><div className="states-grid"><Panel eyebrow="Empty state" title="Arama sonucu yok" className="state-example"><Search /><h3>Eşleşen müşteri bulunamadı</h3><p>Filtreleri temizleyin veya MSISDN biçimini kontrol edin.</p><Button>Filtreleri temizle</Button></Panel><Panel eyebrow="Loading" title="Müşteri kayıtları" className="state-example"><div className="skeleton-list"><i /><i /><i /><i /></div><p>Ekran okuyucu duyurusu: Müşteri kayıtları yükleniyor.</p></Panel><Panel eyebrow="Partial data" title="Bazı servisler yanıt vermiyor" className="state-example warning"><TriangleAlert /><h3>Fatura bağlamı eksik</h3><p>Customer ve subscription verileri güncel; billing-service zaman aşımına uğradı.</p><Button>Tekrar dene</Button></Panel><Panel eyebrow="Offline" title="Bağlantı yok" className="state-example error"><WifiOff /><h3>Signal Atlas çevrimdışı</h3><p>Salt okunur son veri gösteriliyor. Mutasyonlar geçici olarak kapalı.</p><Status label="Son senkron 14:27" tone="muted" /></Panel><Panel eyebrow="403" title="Bu işlem için yetkiniz yok" className="state-example"><LockKeyhole /><h3>PII görüntüleme engellendi</h3><p>Gerekli yetki: customer.pii.reveal. Korelasyon: 9f3c1b7a...e21d</p><Button>Erişim isteği oluştur</Button></Panel><Panel eyebrow="RFC 7807" title="İstek işlenemedi" className="state-example error"><CloudOff /><h3>Customer service geçici hata</h3><pre>{`type: /problems/service-unavailable\nstatus: 503\ncorrelationId: 9f3c1b7a...e21d`}</pre><Button>Detayı kopyala</Button></Panel><Panel eyebrow="Accessibility" title="Etkileşim kontrol listesi" className="accessibility-panel"><ul><li><Check /> Görünür klavye odağı ve mantıklı sekme sırası</li><li><Check /> Durumlar renk, ikon ve metinle iletiliyor</li><li><Check /> Grafikler metinsel özet içeriyor</li><li><Check /> Dialog odağı kapatınca tetikleyiciye dönüyor</li><li><Check /> Minimum kontrol yüksekliği 40 px</li></ul></Panel><Panel eyebrow="Confirmation" title="Etkili işlem örneği"><Notice kind="warning">Aboneliği sonlandırmak +90 532 ••• •• 47 hattını devre dışı bırakır ve açık siparişleri etkileyebilir.</Notice><label>İşlem gerekçesi<textarea placeholder="Zorunlu gerekçe" /></label><div className="action-row"><Button>Vazgeç</Button><Button variant="danger">Sonlandırmayı onayla</Button></div></Panel></div></>;
+  const [tick, refresh] = useRefreshTick();
+  const liveStates = useLiveResource(fallbackSystemStatesView, loadSystemStatesView, [tick]);
+  const view = liveStates.data;
+  const iconFor = (tone: string) => tone === "bad" ? <CloudOff /> : tone === "warn" ? <TriangleAlert /> : tone === "live" ? <Radio /> : <Check />;
+
+  return <><ScreenHeader id="states" action={<Button onClick={refresh}><RefreshCw size={16} /> Yenile</Button>} />{liveStates.error && <Notice kind="warning">Canlı sistem durumu alınamadı; son bilinen snapshot gösteriliyor.</Notice>}<div className="states-grid">{view.cards.map((card) => <Panel eyebrow={card.eyebrow} title={card.title} className={`state-example ${card.tone === "bad" ? "error" : card.tone === "warn" ? "warning" : ""}`} key={`${card.eyebrow}-${card.title}`}>{iconFor(card.tone)}<h3>{card.status}</h3><p>{card.description}</p><Status label={card.detail} tone={card.tone} /></Panel>)}<Panel eyebrow="Snapshot" title="Canlılık bilgisi" className="state-example"><Gauge /><h3>{liveStates.live ? "BFF live" : "Snapshot"}</h3><p>Bu ekran BFF platform ops endpoint'inden periyodik veri çeker.</p><Status label={`Son kontrol ${view.generatedAt}`} tone={liveStates.live ? "ok" : "warn"} /></Panel></div></>;
 }
 
 export function ScreenRenderer({ id, onNavigate }: { id: ViewId; onNavigate: (view: ViewId) => void }) {

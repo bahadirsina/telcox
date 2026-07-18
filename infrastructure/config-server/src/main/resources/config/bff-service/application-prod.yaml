@@ -2,6 +2,8 @@ telcox.profile: prod
 telcox:
   bff:
     upstream:
+      api-gateway: ${API_GATEWAY_URL:http://api-gateway:8080}
+      bff-service: ${BFF_SERVICE_URL:http://bff-service:9011}
       identity-service: ${IDENTITY_SERVICE_URL:http://identity-service:9001}
       customer-service: ${CUSTOMER_SERVICE_URL:http://customer-service:9002}
       product-catalog-service: ${PRODUCT_CATALOG_SERVICE_URL:http://product-catalog-service:9003}
