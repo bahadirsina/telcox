@@ -19,12 +19,17 @@ public class RateLimitConfig {
     @Bean
     public KeyResolver userOrIpKeyResolver() {
         return exchange -> ReactiveSecurityContextHolder.getContext()
-                .map(ctx -> ctx.getAuthentication().getName())
-                .switchIfEmpty(Mono.defer(() -> {
-                    String ip = exchange.getRequest().getRemoteAddress() != null
-                            ? exchange.getRequest().getRemoteAddress().getAddress().getHostAddress()
-                            : "unknown";
-                    return Mono.just("ip:" + ip);
-                }));
+                .flatMap(ctx -> {
+                    String name = ctx.getAuthentication() != null ? ctx.getAuthentication().getName() : null;
+                    return name == null || name.isBlank() ? Mono.empty() : Mono.just(name);
+                })
+                .switchIfEmpty(Mono.defer(() -> Mono.just(ipKey(exchange))));
+    }
+
+    private String ipKey(org.springframework.web.server.ServerWebExchange exchange) {
+        String ip = exchange.getRequest().getRemoteAddress() != null
+                ? exchange.getRequest().getRemoteAddress().getAddress().getHostAddress()
+                : "unknown";
+        return "ip:" + ip;
     }
 }
