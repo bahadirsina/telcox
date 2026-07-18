@@ -51,6 +51,8 @@ spec:
               value: "1"
             - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
               value: "true"
+            - name: KAFKA_HEAP_OPTS
+              value: "-Xms96m -Xmx192m"
             - name: CLUSTER_ID
               value: "telcox-kafka-cluster-id-01"
           readinessProbe:

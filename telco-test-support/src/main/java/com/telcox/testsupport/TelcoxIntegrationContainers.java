@@ -2,18 +2,18 @@ package com.telcox.testsupport;
 
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.kafka.ConfluentKafkaContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 public final class TelcoxIntegrationContainers {
 
-    private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))
+    private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"))
             .withDatabaseName("telcox_test")
             .withUsername("telcox")
             .withPassword("telcox");
 
-    private static final KafkaContainer KAFKA = new KafkaContainer(
+    private static final ConfluentKafkaContainer KAFKA = new ConfluentKafkaContainer(
             DockerImageName.parse("confluentinc/cp-kafka:7.7.1"));
 
     private static final GenericContainer<?> REDIS = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
@@ -28,11 +28,11 @@ public final class TelcoxIntegrationContainers {
     private TelcoxIntegrationContainers() {
     }
 
-    public static PostgreSQLContainer<?> postgres() {
+    public static PostgreSQLContainer postgres() {
         return start(POSTGRES);
     }
 
-    public static KafkaContainer kafka() {
+    public static ConfluentKafkaContainer kafka() {
         return start(KAFKA);
     }
 
@@ -45,14 +45,14 @@ public final class TelcoxIntegrationContainers {
     }
 
     public static void applyPostgres(DynamicPropertyRegistry registry) {
-        PostgreSQLContainer<?> postgres = postgres();
+        PostgreSQLContainer postgres = postgres();
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
     }
 
     public static void applyKafka(DynamicPropertyRegistry registry) {
-        KafkaContainer kafka = kafka();
+        ConfluentKafkaContainer kafka = kafka();
         registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
     }
 

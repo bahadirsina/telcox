@@ -45,6 +45,8 @@ spec:
               value: "true"
             - name: KC_HEALTH_ENABLED
               value: "true"
+            - name: JAVA_OPTS_APPEND
+              value: "-Xms32m -Xmx256m -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=32m -Xss512k -XX:ActiveProcessorCount=2"
           readinessProbe:
             httpGet:
               path: /health/ready
@@ -127,6 +129,8 @@ spec:
               value: "false"
             - name: VALUE_CONVERTER_SCHEMAS_ENABLE
               value: "false"
+            - name: KAFKA_HEAP_OPTS
+              value: "-Xms64m -Xmx192m"
           readinessProbe:
             httpGet:
               path: /connectors
@@ -186,6 +190,8 @@ spec:
               value: telcox
             - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
               value: kafka:29092
+            - name: JAVA_OPTS
+              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
 ---
 apiVersion: v1
 kind: Service
@@ -226,6 +232,9 @@ spec:
           image: openzipkin/zipkin:latest
           ports:
             - containerPort: 9411
+          env:
+            - name: JAVA_OPTS
+              value: "-Xms16m -Xmx128m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+UseSerialGC -XX:ActiveProcessorCount=2"
           readinessProbe:
             httpGet:
               path: /health
