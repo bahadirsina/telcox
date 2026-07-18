@@ -173,7 +173,10 @@ Ana ekranlar: Genel Bakış, Müşteriler, Müşteri 360, KYC, Katalog, Sipariş
 
 ## Linear Proje Takibi
 
-Proje yönetimi bitirme projesi görev dağılımına uygun şekilde Linear üzerinden yürütülmüştür. Repository içinde gerçek Linear ekran görüntüsü dosyası bulunmadığı için README sahte veya kırık görsel içermez.
+Proje yönetimi bitirme projesi görev dağılımına uygun şekilde Linear üzerinden yürütülmüştür.
+
+![Signal Atlas Linear Task Management](assets/screenshots/linear-task.png)
+
 
 ## Sonar Entegrasyonu
 
