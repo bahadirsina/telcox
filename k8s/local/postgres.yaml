@@ -1,0 +1,784 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-postgres
+  namespace: telcox-local
+  labels:
+    app: identity-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: identity-postgres
+  template:
+    metadata:
+      labels:
+        app: identity-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          args: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=20", "-c", "max_wal_senders=20"]
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: identity_db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "identity_db"]
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "identity_db"]
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: identity-postgres
+  namespace: telcox-local
+  labels:
+    app: identity-postgres
+spec:
+  selector:
+    app: identity-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customer-postgres
+  namespace: telcox-local
+  labels:
+    app: customer-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: customer-postgres
+  template:
+    metadata:
+      labels:
+        app: customer-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          args: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=20", "-c", "max_wal_senders=20"]
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: customer_db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "customer_db"]
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "customer_db"]
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: customer-postgres
+  namespace: telcox-local
+  labels:
+    app: customer-postgres
+spec:
+  selector:
+    app: customer-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-postgres
+  namespace: telcox-local
+  labels:
+    app: product-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: product-postgres
+  template:
+    metadata:
+      labels:
+        app: product-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          args: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=20", "-c", "max_wal_senders=20"]
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: product_db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "product_db"]
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "product_db"]
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-postgres
+  namespace: telcox-local
+  labels:
+    app: product-postgres
+spec:
+  selector:
+    app: product-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-postgres
+  namespace: telcox-local
+  labels:
+    app: order-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: order-postgres
+  template:
+    metadata:
+      labels:
+        app: order-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          args: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=20", "-c", "max_wal_senders=20"]
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: order_db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "order_db"]
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "order_db"]
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-postgres
+  namespace: telcox-local
+  labels:
+    app: order-postgres
+spec:
+  selector:
+    app: order-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: subscription-postgres
+  namespace: telcox-local
+  labels:
+    app: subscription-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: subscription-postgres
+  template:
+    metadata:
+      labels:
+        app: subscription-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          args: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=20", "-c", "max_wal_senders=20"]
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: subscription_db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "subscription_db"]
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "subscription_db"]
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: subscription-postgres
+  namespace: telcox-local
+  labels:
+    app: subscription-postgres
+spec:
+  selector:
+    app: subscription-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: usage-postgres
+  namespace: telcox-local
+  labels:
+    app: usage-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: usage-postgres
+  template:
+    metadata:
+      labels:
+        app: usage-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          args: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=20", "-c", "max_wal_senders=20"]
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: usage_db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "usage_db"]
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "usage_db"]
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: usage-postgres
+  namespace: telcox-local
+  labels:
+    app: usage-postgres
+spec:
+  selector:
+    app: usage-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing-postgres
+  namespace: telcox-local
+  labels:
+    app: billing-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: billing-postgres
+  template:
+    metadata:
+      labels:
+        app: billing-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          args: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=20", "-c", "max_wal_senders=20"]
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: billing_db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "billing_db"]
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "billing_db"]
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: billing-postgres
+  namespace: telcox-local
+  labels:
+    app: billing-postgres
+spec:
+  selector:
+    app: billing-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-postgres
+  namespace: telcox-local
+  labels:
+    app: payment-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: payment-postgres
+  template:
+    metadata:
+      labels:
+        app: payment-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          args: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=20", "-c", "max_wal_senders=20"]
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: payment_db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "payment_db"]
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "payment_db"]
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-postgres
+  namespace: telcox-local
+  labels:
+    app: payment-postgres
+spec:
+  selector:
+    app: payment-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-postgres
+  namespace: telcox-local
+  labels:
+    app: notification-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: notification-postgres
+  template:
+    metadata:
+      labels:
+        app: notification-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          args: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=20", "-c", "max_wal_senders=20"]
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: notification_db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "notification_db"]
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "notification_db"]
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-postgres
+  namespace: telcox-local
+  labels:
+    app: notification-postgres
+spec:
+  selector:
+    app: notification-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticket-postgres
+  namespace: telcox-local
+  labels:
+    app: ticket-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ticket-postgres
+  template:
+    metadata:
+      labels:
+        app: ticket-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          args: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=20", "-c", "max_wal_senders=20"]
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: ticket_db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: telcox-local-secret
+                  key: DB_PASSWORD
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "ticket_db"]
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "telcox", "-d", "ticket_db"]
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ticket-postgres
+  namespace: telcox-local
+  labels:
+    app: ticket-postgres
+spec:
+  selector:
+    app: ticket-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak-postgres
+  namespace: telcox-local
+  labels:
+    app: keycloak-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: keycloak-postgres
+  template:
+    metadata:
+      labels:
+        app: keycloak-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: keycloak
+            - name: POSTGRES_USER
+              value: keycloak
+            - name: POSTGRES_PASSWORD
+              value: keycloak
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "keycloak", "-d", "keycloak"]
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 15
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "keycloak", "-d", "keycloak"]
+            initialDelaySeconds: 300
+            timeoutSeconds: 5
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-postgres
+  namespace: telcox-local
+  labels:
+    app: keycloak-postgres
+spec:
+  selector:
+    app: keycloak-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432

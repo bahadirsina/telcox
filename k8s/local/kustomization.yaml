@@ -5,9 +5,12 @@ resources:
   - namespace.yaml
   - configmap.yaml
   - secret.yaml
+  - postgres.yaml
   - redis.yaml
   - kafka.yaml
+  - platform-services.yaml
   - discovery-server.yaml
   - config-server.yaml
+  - business-services.yaml
   - api-gateway.yaml
   - bff-service.yaml

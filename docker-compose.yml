@@ -82,7 +82,7 @@ x-service-common: &service-common
     ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
     TRACING_SAMPLING_PROBABILITY: 1.0
     LOGGING_STRUCTURED_FORMAT: ecs
-    JAVA_OPTS: "-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m"
+    JAVA_OPTS: "-Xms64m -Xmx384m -XX:MaxMetaspaceSize=256m"
 
 # Tek resmi Debezium registry/tag'i. Kafka Connect worker bu image'i kullanır.
 x-debezium-connect-image: &debezium-connect-image quay.io/debezium/connect:2.7.3.Final
@@ -473,7 +473,7 @@ services:
     ports:
       - "18761:8761"
     environment:
-      JAVA_OPTS: "-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m"
+      JAVA_OPTS: "-Xms64m -Xmx384m -XX:MaxMetaspaceSize=256m"
     networks:
       - telcox-net
     healthcheck:
@@ -493,7 +493,7 @@ services:
       - "18888:8888"
     environment:
       EUREKA_URL: http://discovery-server:8761/eureka/
-      JAVA_OPTS: "-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m"
+      JAVA_OPTS: "-Xms64m -Xmx384m -XX:MaxMetaspaceSize=256m"
     networks:
       - telcox-net
     healthcheck:
@@ -576,7 +576,7 @@ services:
       CONFIG_SERVER_URL: http://config-server:8888
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JAVA_OPTS: "-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m"
+      JAVA_OPTS: "-Xms64m -Xmx384m -XX:MaxMetaspaceSize=256m"
     networks:
       - telcox-net
     healthcheck:
